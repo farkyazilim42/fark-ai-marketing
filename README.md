@@ -5,8 +5,8 @@ Fark Yazılım için SEO ve Google Ads çalışma alanı. Next.js 16, TypeScript
 ## İlk sürümde çalışan özellikler
 
 - Türkçe, mobil uyumlu pazarlama paneli.
-- Görev ekleme, tamamlama, filtreleme ve arama.
-- Mikro Jump, Mikro Fly, e-Dönüşüm, ERP ve MRP için düzenlenebilir kampanya taslakları.
+- Görev ekleme, düzenleme, silme, tamamlama, filtreleme ve arama.
+- Mikro Jump, Mikro Fly, e-Dönüşüm, ERP ve MRP için düzenlenebilir ve silinebilir kampanya taslakları.
 - Taslak → İnceleme → Onaylandı akışı; onaylar **Google Ads'te yayınlama yapmaz**.
 - Yerel tarayıcı kaydı, JSON yedekleme ve geri yükleme.
 - Supabase ile e-posta/parola girişi ve kullanıcıya özel bulut kayıtları.
@@ -29,7 +29,7 @@ Hesap bağlantıları kurulmadan görevler ve taslaklar yerel modda çalışır;
 
 1. Kendi Supabase projenizi oluşturun. SQL Editor'da `supabase/schema.sql` dosyasını **bir kez** çalıştırın.
 2. Auth ayarlarında herkese açık kayıt olmayı kapatın. Çalışacak ekip kullanıcılarını davet edin; e-posta/parola girişini etkinleştirin.
-3. Vercel'e `NEXT_PUBLIC_SUPABASE_URL` ve `NEXT_PUBLIC_SUPABASE_ANON_KEY` ekleyin. Anon key RLS koruması altında tarayıcıda kullanılabilir; **service role anahtarı eklemeyin**.
+3. Vercel'e `NEXT_PUBLIC_SUPABASE_URL` ve `NEXT_PUBLIC_SUPABASE_ANON_KEY` ekleyin. Anon key RLS koruması altında tarayıcıda kullanılabilir; Normal panel kullanımı service role anahtarı gerektirmez. Haftalık otomasyonun sunucu ayarları aşağıda açıklanmıştır.
 4. `ADMIN_EMAILS` değerine Google ve AI kaynaklarına erişecek e-postaları virgülle ayırarak yazın.
 5. Redeploy sonrası panelden giriş yapın. Her kullanıcı kendi görev/taslak/rapor alanına sahiptir; ortak ekip alanı bu sürümde yoktur.
 
@@ -57,14 +57,27 @@ Bu ilk sürüm, sunucuda saklanan bir Google OAuth bağlantısını izinli kulla
 3. Gerçek hesap verilerini senkronize edin. **AI raporları → AI raporu oluştur**.
 4. İşlem, senkronize pazarlama metriklerini ve arama sorgularını OpenAI'a gönderir. ChatGPT aboneliği API kullanımını karşılamaz.
 
-## Henüz etkin olmayanlar
+## Haftalık rapor ve Slack
 
-- Zamanlanmış haftalık raporlar ve cron.
-- Slack'te otomatik rapor/uyarı gönderme ve GitHub/Vercel deploy bildirimleri.
+Kodda haftalık zamanlayıcı, iş geçmişi ve onaylı manuel Slack gönderimi hazırdır; `.env.example` varsayılanında otomasyon ve planlı gönderim kapalıdır. Bağlantılar paneli eksik ayarları ve çalışma geçmişini gösterir.
+
+1. Temel şemadan sonra `supabase/automation.sql` dosyasını SQL Editor'da çalıştırın. Bu ek migration tekrar çalıştırılabilir.
+2. Sunucuda `AUTOMATION_USER_ID` değerini raporların sahibi olan Supabase kullanıcısının UUID'si yapın. Kullanıcının e-postası `ADMIN_EMAILS` listesinde bulunmalı.
+3. `SUPABASE_SERVICE_ROLE_KEY` yalnızca Vercel sunucu ortamına eklenir. Asla `NEXT_PUBLIC_` önekiyle, tarayıcıya veya GitHub'a koymayın. Otomasyon kullanıcı doğrulaması ve kayıt için bu anahtarı kullanır.
+4. `CRON_SECRET` en az 32 karakterlik rastgele bir sır olmalı. Google ve OpenAI ayarlarını tamamlayın. `AUTOMATION_ENABLED=true` ile etkinleştirin.
+5. Slack uygulamanızın **Incoming Webhook** bağlantısını `#ai-reports` kanalına bağlayın ve `SLACK_REPORT_WEBHOOK_URL` sunucu değişkenine koyun. Webhook, kendi bağlı kanalına gönderir; `SLACK_REPORT_CHANNEL_NAME` yalnızca paneldeki kanal etiketidir. Bağlı kanalla eşleşmeli.
+6. Önce panelde onay vererek haftayı çalıştırın ve gerçek veri raporunu kontrol edin. AI raporları ekranında kaydedilmiş bir rapor **Slack’e gönder** ile ayrıca onaylanabilir. Bildirim endpoint'i yalnızca kullanıcının kayıtlı raporunu kabul eder ve saatlik 10 deneme sınırı uygular.
+7. Planlı Slack gönderimi için `AUTOMATION_SLACK_ENABLED=true` ekleyin ve yeniden yayınlayın. `vercel.json` cron'u üretimde pazartesi 06:00 UTC / 09:00 Türkiye saati için ayarlıdır; Hobby planda o saat içinde çalışabilir.
+
+Haftalık kilit kullanıcı/hafta başına bir çalışma kabul eder; eşzamanlı veya tekrarlı çağrılar yeni AI raporu üretmez. Başarısız iş de kilidi korur. Slack teslimat kaydı manuel ve planlı gönderimde ortaktır; aynı raporun ikinci gönderimi engellenir. Zaman aşımı, teslimatın belirsiz olduğu anlamına gelir ve otomatik tekrar gönderilmez. Yeniden denemeden önce iş geçmişini ve Slack kanalını inceleyin; yanlışlıkla yinelenen mesaj oluşturmamak için kayıtları körlemesine silmeyin.
+
+Otomasyon raporları ayrı `scheduled_reports` tablosunda tutulur ve panelde gösterilir. Mevcut görev ve kampanya taslaklarını otomasyon değiştirmez. Veritabanına kaydedilen raporlar JSON dışa aktarmaya dahil edilir.
+
+## Kapsam dışında kalan işlemler
+
+- GitHub/Vercel deploy bildirimleri ve diğer Slack kanallarına otomatik uyarılar.
 - Google Ads'e kampanya yayınlama veya bütçe değişikliği.
 - Web sitesine içerik yayınlama ve çok müşterili SaaS.
-
-Önce Supabase ve Google hesapları doğrulanmalı; ardından zamanlayıcı, bildirim ve canlı değişiklikler için ayrıca uçtan uca kurulum yapılmalı. Bunlar panelde etkinmiş gibi gösterilmez.
 
 ## Yerel geliştirme ve doğrulama
 
@@ -76,6 +89,8 @@ npm run test
 npm run typecheck
 npm run build
 npm start
+# Ayrı terminalde, çalışan sunucuya karşı API kontrolleri:
+TEST_BASE_URL=http://localhost:3000 node tests/api.test.mjs
 ```
 
 Gerçek entegrasyonlarla geliştirmek için `.env.example` dosyasını `.env.local` olarak kopyalayın, değerleri güvenli biçimde doldurun. `.env.local` Git'e eklenmez.

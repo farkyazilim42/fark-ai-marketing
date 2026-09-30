@@ -18,3 +18,13 @@ jobs:
       - run: npm test
       - run: npm run typecheck
       - run: npm run build
+      - name: Verify production API access controls
+        run: |
+          npm start -- --hostname 127.0.0.1 > /tmp/fark-server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --silent --fail http://127.0.0.1:3000/api/integrations > /dev/null; then break; fi
+            sleep 1
+          done
+          TEST_BASE_URL=http://127.0.0.1:3000 node tests/api.test.mjs
