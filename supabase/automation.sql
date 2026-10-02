@@ -69,3 +69,6 @@ revoke all on function public.claim_notification_quota() from public, anon;
 grant execute on function public.claim_notification_quota() to authenticated;
 
 grant all on public.notification_deliveries to service_role;
+
+-- Owner-scoped report history and foreign-key lookups.
+create index if not exists scheduled_reports_owner_created_idx on public.scheduled_reports(user_id, created_at desc);
