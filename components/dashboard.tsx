@@ -7,6 +7,7 @@ import AutomationPanel from "./automation-panel";
 import ShareReport from "./share-report";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
+import { loginErrorMessage } from "@/lib/auth-errors";
 import { campaignTemplate, initialWorkspace, products, validWorkspace, type Workspace, type Campaign, type Task } from "@/lib/model";
 
 type View = "overview" | "seo" | "ads" | "tasks" | "reports" | "settings";
@@ -50,6 +51,11 @@ export default function Dashboard() {
   const accountEpoch = useRef(0);
 
   useEffect(() => {
+    const entry = new URL(window.location.href);
+    if (entry.searchParams.get("login") === "1") {
+      setModal("login"); entry.searchParams.delete("login");
+      window.history.replaceState(null, "", entry.pathname + entry.search + entry.hash);
+    }
     try { const saved = localStorage.getItem(storageKey); if (saved) { const parsed = JSON.parse(saved); if (validWorkspace(parsed)) setWorkspace(parsed); } } catch { setNotice("Yerel veriler okunamadı. JSON yedeğiniz varsa geri yükleyebilirsiniz."); }
     setReady(true);
     fetch("/api/integrations").then(r => r.json()).then(setConnections).catch(() => setNotice("Bağlantı durumu alınamadı."));
@@ -98,7 +104,7 @@ export default function Dashboard() {
     if (!modal && !approval) return;
     const dialog = document.querySelector<HTMLElement>('[role="dialog"]');
     const previous = document.activeElement as HTMLElement | null;
-    const focusables = () => Array.from(dialog?.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), select, textarea') || []);
+    const focusables = () => Array.from(dialog?.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled]), select, textarea') || []);
     focusables()[0]?.focus();
     function key(event: KeyboardEvent) {
       if (event.key === "Escape") { setModal(null); setApproval(null); }
@@ -226,5 +232,23 @@ function CampaignForm({ onSave, initial }: { onSave: (campaign: Campaign) => voi
 }
 function LoginForm({ onSuccess }: { onSuccess: () => void }) {
   const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
-  return <form onSubmit={async e => { e.preventDefault(); if (!supabase) return; setBusy(true); const f = new FormData(e.currentTarget); const { error } = await supabase.auth.signInWithPassword({ email: String(f.get("email")), password: String(f.get("password")) }); setBusy(false); if (error) setError("Giriş yapılamadı. E-posta ve parolanızı kontrol edin."); else onSuccess(); }}><div className="eyebrow">FARK ÇALIŞMA ALANI</div><h2 id="modal-title">Hesabınıza giriş yapın</h2><p>{supabase ? "Supabase üzerinden davet edilen ekip hesabınızı kullanın. Yerel taslaklarınız hesaba otomatik aktarılmaz." : "Supabase bağlantısı henüz yapılandırılmadı. Bağlantılar ekranındaki kurulum adımlarını tamamlayın."}</p>{supabase && <><label>E-posta<input name="email" type="email" autoComplete="username" required autoFocus/></label><label>Parola<input name="password" type="password" autoComplete="current-password" required/></label>{error && <p className="error-text" role="alert">{error}</p>}<button className="button primary full" disabled={busy}>{busy ? "Giriş yapılıyor" : "Giriş yap"}<ArrowRight size={16}/></button></>}</form>;
+  return <form onSubmit={async e => {
+    e.preventDefault();
+    if (!supabase || busy) return;
+    setError("");
+    setBusy(true);
+    try {
+      const form = new FormData(e.currentTarget);
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: String(form.get("email") || "").trim(),
+        password: String(form.get("password") || "")
+      });
+      if (signInError) setError(loginErrorMessage(signInError));
+      else onSuccess();
+    } catch (signInError) {
+      setError(loginErrorMessage(signInError));
+    } finally {
+      setBusy(false);
+    }
+  }}><div className="eyebrow">FARK ÇALIŞMA ALANI</div><h2 id="modal-title">Hesabınıza giriş yapın</h2><p>{supabase ? "Supabase üzerinden davet edilen ekip hesabınızı kullanın. Yerel taslaklarınız hesaba otomatik aktarılmaz." : "Supabase bağlantısı henüz yapılandırılmadı. Bağlantılar ekranındaki kurulum adımlarını tamamlayın."}</p>{supabase && <><label>E-posta<input name="email" type="email" autoComplete="username" required autoFocus/></label><label>Parola<input name="password" type="password" autoComplete="current-password" required/></label>{error && <p className="error-text" role="alert">{error}</p>}<button className="button primary full" disabled={busy}>{busy ? "Giriş yapılıyor" : "Giriş yap"}<ArrowRight size={16}/></button><a className="text-button" href="/auth/recover" style={{ display: "inline-block", marginTop: 16 }}>Parolamı unuttum</a></>}</form>;
 }
