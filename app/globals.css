@@ -17,4 +17,8 @@
 .missing-list li { margin-top: 6px; color: var(--muted); }
 .task-row .text-button { flex-shrink: 0; padding: 6px; }
 .card-actions { flex-wrap: wrap; }
+.footer { flex-wrap: wrap; align-items: center; }
+.footer-links { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 11px; color: var(--muted); }
+.footer-links a { display: inline-block; padding: 7px 0; text-underline-offset: 4px; }
+.footer-links a:hover { color: var(--teal); }
 @media (max-width: 620px) { .task-row { flex-wrap: wrap; } .automation-body { padding: 0 16px 16px; } }

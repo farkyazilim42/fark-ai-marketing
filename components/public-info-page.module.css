@@ -1,0 +1,27 @@
+.page{max-width:1080px;margin:0 auto;padding:0 28px;min-height:100vh}
+.header{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:28px 0;border-bottom:1px solid var(--border)}
+.brand{font-family:'Manrope',sans-serif;font-size:21px;font-weight:800;letter-spacing:.03em;text-decoration:none;color:var(--teal)}
+.brand span{color:var(--text);font-size:15px;font-weight:600;letter-spacing:0}
+.header nav{display:flex;flex-wrap:wrap;gap:10px 22px;font-size:12px}
+.header nav a{text-decoration:none;color:var(--muted);padding:5px 0}
+.header nav a[aria-current=page],.header nav a:hover{color:var(--teal)}
+.main{max-width:840px;margin:0 auto;padding:56px 0 44px}
+.intro{margin-bottom:30px}
+.eyebrow{color:var(--teal);font-size:10px;letter-spacing:.16em;font-weight:600;margin-bottom:14px}
+.intro h1{font-size:clamp(28px,5vw,40px);line-height:1.2;letter-spacing:-.04em;margin-bottom:18px}
+.description{font-size:16px;line-height:1.8;color:#bbc6d3;max-width:720px}
+.updated{font-size:11px;margin-top:18px}
+.content{border:1px solid var(--border);border-radius:14px;padding:32px;background:var(--surface)}
+.content section+section{border-top:1px solid var(--border);margin-top:28px;padding-top:28px}
+.content h2{font-size:18px;line-height:1.5;margin:0 0 12px;letter-spacing:-.02em}
+.content p,.content li{font-size:14px;line-height:1.85;color:#b2becc;overflow-wrap:anywhere}
+.content p+p,.content p+ul,.content p+ol{margin-top:12px}
+.content ul,.content ol{padding-left:22px;margin:0}
+.content li+li{margin-top:10px}
+.content strong{color:#e1e8ef;font-weight:600}
+.content a{color:var(--teal);text-decoration-thickness:1px;text-underline-offset:3px}
+.footer{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:26px 0 34px;border-top:1px solid var(--border);font-size:11px;color:var(--muted)}
+.footer strong{font-weight:500;line-height:1.8;display:block}
+.footer div>a{display:inline-block;margin-top:5px;color:var(--teal);text-underline-offset:3px}
+.footer>a{text-decoration:none}
+@media(max-width:640px){.page{padding:0 18px}.header{align-items:flex-start;flex-direction:column;gap:14px;padding:22px 0}.header nav{gap:10px 18px}.main{padding:36px 0 30px}.description{font-size:14px}.content{padding:23px 20px}.content p,.content li{font-size:13px}.footer{align-items:flex-start;flex-direction:column;gap:18px}}
