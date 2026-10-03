@@ -18,7 +18,8 @@ jobs:
       - run: npm test
       - run: npm run typecheck
       - run: npm run build
-      - name: Verify production API access controls
+      - run: npx playwright install --with-deps chromium
+      - name: Verify production API access controls and Ads interface
         run: |
           npm start -- --hostname 127.0.0.1 > /tmp/fark-server.log 2>&1 &
           server_pid=$!
@@ -28,3 +29,4 @@ jobs:
             sleep 1
           done
           TEST_BASE_URL=http://127.0.0.1:3000 node tests/api.test.mjs
+          TEST_BASE_URL=http://127.0.0.1:3000 npm run test:ui

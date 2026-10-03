@@ -17,7 +17,7 @@ export function integrationStatus() {
     supabase: !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
     gsc: google && !!process.env.GSC_SITE_URL,
     ga4: google && !!process.env.GA4_PROPERTY_ID,
-    ads: google && !!(process.env.GOOGLE_ADS_CUSTOMER_ID && process.env.GOOGLE_ADS_DEVELOPER_TOKEN && process.env.GOOGLE_ADS_API_VERSION),
+    ads: google && !!(process.env.GOOGLE_ADS_CUSTOMER_ID && process.env.GOOGLE_ADS_API_VERSION),
     openai: !!process.env.OPENAI_API_KEY
   };
 }
