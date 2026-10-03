@@ -6,6 +6,9 @@ Fark Yazılım için SEO ve Google Ads çalışma alanı. Next.js 16, TypeScript
 
 - Türkçe, mobil uyumlu pazarlama paneli.
 - Görev ekleme, düzenleme, silme, tamamlama, filtreleme ve arama.
+- Gerçek Search Console sorgularından SEO fırsatları: 20+ gösterim ve 4–20 ortalama konum; tıklama oranı ve tek tuşla görev oluşturma.
+- Kampanya taslaklarını Türkçe karakterleri koruyan, elektronik tablo formüllerine karşı korumalı CSV olarak indirme.
+- Türkiye saatinde rapor tarihleri, zaman aşımı ve tekrar deneme ekranı. Senkronizasyon/AI raporu sırasında yapılan görev değişiklikleri korunur.
 - Mikro Jump, Mikro Fly, e-Dönüşüm, ERP ve MRP için düzenlenebilir ve silinebilir kampanya taslakları.
 - Taslak → İnceleme → Onaylandı akışı; onaylar **Google Ads'te yayınlama yapmaz**.
 - Yerel tarayıcı kaydı, JSON yedekleme ve geri yükleme.
@@ -109,3 +112,7 @@ Gerçek entegrasyonlarla geliştirmek için `.env.example` dosyasını `.env.loc
 ## Veri ve güvenlik
 
 API anahtarları yalnızca sunucu ortam değişkenlerinde bulunur. Google/AI API'leri geçerli Supabase oturumu ve `ADMIN_EMAILS` izin listesi olmadan çalışmaz. Kullanıcı verileri RLS ile ayrılır. Yerel mod yalnızca o tarayıcı profiline aittir; paylaşılan bilgisayarlarda hesabınıza giriş yapıp çıkış yapın. JSON yedekleri raporlarınızı ve çalışma alanınızı içerir; güvenli saklayın.
+
+## 3 Ekim 2026 canlı kurulum kontrolü
+
+Üretim durum endpoint’leri kontrol edildi: Supabase, Search Console, GA4, Google Ads ve OpenAI yapılandırması yok; otomasyon ve Slack kapalı. Bu nedenle hesap girişi, gerçek metrikler, AI raporları ve zamanlanmış rapor teslimatı henüz gerçek hesaplarla doğrulanamaz. Üstteki kurulum adımları tamamlanıp yeni yayın yapıldıktan sonra izinli kullanıcıyla giriş, senkronizasyon, AI raporu ve manuel haftalık çalışma sırasıyla doğrulanmalıdır. Anahtarlar ve OAuth tokenları sohbet veya GitHub üzerinden paylaşılmamalıdır.

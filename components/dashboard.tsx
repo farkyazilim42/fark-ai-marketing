@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { BarChart3, Search, Megaphone, CheckSquare, FileText, Plug, ArrowUpRight, ArrowRight, RefreshCw, Plus, Download, Check, X, Sparkles, ShieldCheck, Menu, LogOut, Circle, ChevronRight, Globe, Target, Layers, AlertCircle } from "lucide-react";
+import { seoOpportunities, opportunityTask, campaignsCsv } from "@/lib/seo";
 import AutomationPanel from "./automation-panel";
 import ShareReport from "./share-report";
 import type { Session } from "@supabase/supabase-js";
@@ -16,7 +17,7 @@ const navigation = [
 ] as const;
 const storageKey = "fark-marketing-workspace-v1";
 const format = (n: number | null | undefined) => n == null ? "—" : new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 1 }).format(n);
-const date = (s: string) => new Intl.DateTimeFormat("tr-TR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(s));
+const date = (s: string) => new Intl.DateTimeFormat("tr-TR", { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Istanbul" }).format(new Date(s));
 function exportFile(name: string, content: string, type: string) {
   const url = URL.createObjectURL(new Blob([content], { type }));
   const a = document.createElement("a"); a.href = url; a.download = name; a.click(); URL.revokeObjectURL(url);
@@ -43,6 +44,9 @@ export default function Dashboard() {
   const [reportRefresh, setReportRefresh] = useState(0);
   const activeUser = useRef<string | null>(null);
   const saveQueue = useRef(Promise.resolve());
+  const workspaceRef = useRef(workspace);
+  workspaceRef.current = workspace;
+  const accountEpoch = useRef(0);
 
   useEffect(() => {
     try { const saved = localStorage.getItem(storageKey); if (saved) { const parsed = JSON.parse(saved); if (validWorkspace(parsed)) setWorkspace(parsed); } } catch { setNotice("Yerel veriler okunamadı. JSON yedeğiniz varsa geri yükleyebilirsiniz."); }
@@ -51,6 +55,7 @@ export default function Dashboard() {
     if (!supabase) return;
     supabase.auth.getSession().then(({ data }) => { activeUser.current = data.session?.user.id || null; setSession(data.session); });
     const { data } = supabase.auth.onAuthStateChange((_event, next) => {
+      if (activeUser.current !== (next?.user.id || null)) accountEpoch.current++;
       setSession(next);
       activeUser.current = next?.user.id || null;
       if (!next) {
@@ -108,6 +113,7 @@ export default function Dashboard() {
   async function save(next: Workspace) {
     if (activeUser.current !== (session?.user.id || null)) return;
     if (session && !cloudReady) { setNotice("Bulut verileri yüklenmeden değişiklik yapılamaz. Bağlantıları kontrol edin."); return; }
+    workspaceRef.current = next;
     setWorkspace(next);
     if (session && supabase) {
       const userId = session.user.id;
@@ -126,29 +132,34 @@ export default function Dashboard() {
 
   async function api(path: string, body?: unknown) {
     const { data } = supabase ? await supabase.auth.getSession() : { data: { session: null } };
-    const response = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json", ...(data.session ? { Authorization: `Bearer ${data.session.access_token}` } : {}) }, body: body ? JSON.stringify(body) : undefined });
+    const response = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json", ...(data.session ? { Authorization: `Bearer ${data.session.access_token}` } : {}) }, body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(65000) });
     const result = await response.json(); if (!response.ok) throw new Error(result.error || "İşlem tamamlanamadı."); return result;
   }
   async function sync() {
     if (session && !cloudReady) { setNotice("Önce bulut verilerinin yüklenmesini bekleyin."); return; }
+    const epoch = accountEpoch.current;
     setBusy(true);
-    try { const metrics = await api("/api/integrations"); await save({ ...workspace, metrics }); if (metrics.errors.length) setNotice(metrics.errors.join(" ")); }
+    try { const metrics = await api("/api/integrations"); if (epoch !== accountEpoch.current) return; await save({ ...workspaceRef.current, metrics }); if (metrics.errors.length) setNotice(metrics.errors.join(" ")); }
     catch (error) { setNotice((error as Error).message); } finally { setBusy(false); }
   }
   async function generateReport() {
     if (session && !cloudReady) { setNotice("Önce bulut verilerinin yüklenmesini bekleyin."); return; }
+    const epoch = accountEpoch.current;
     setBusy(true);
     try {
       const { text } = await api("/api/report", { metrics: workspace.metrics });
+      if (epoch !== accountEpoch.current) return;
       const report = { id: crypto.randomUUID(), created: new Date().toISOString(), text, source: "AI" as const };
-      await save({ ...workspace, reports: [report, ...workspace.reports] }); setSelectedReport(report.id);
+      await save({ ...workspaceRef.current, reports: [report, ...workspaceRef.current.reports] }); setSelectedReport(report.id);
     } catch (error) { setNotice((error as Error).message); } finally { setBusy(false); }
   }
   async function logout() {
-    if (supabase) await supabase.auth.signOut(); setSession(null); setCloudReady(false);
+    accountEpoch.current++;
+    if (supabase) { const { error } = await supabase.auth.signOut(); if (error) { setNotice("Çıkış yapılamadı. Tekrar deneyin."); return; } } setSession(null); setCloudReady(false);
     try { const saved = JSON.parse(localStorage.getItem(storageKey) || "null"); setWorkspace(validWorkspace(saved) ? saved : structuredClone(initialWorkspace)); } catch { setWorkspace(structuredClone(initialWorkspace)); }
   }
   function go(next: View) { setView(next); setMenu(false); setQuery(""); setFilter("Tümü"); }
+  const opportunities = seoOpportunities(workspace.metrics);
   const finished = workspace.tasks.filter(t => t.done).length;
   const connected = Object.values(connections).filter(Boolean).length;
   const metrics = workspace.metrics;
@@ -180,9 +191,9 @@ export default function Dashboard() {
           <section className="focus-strip"><span className="icon-box"><Target size={20}/></span><div><h3>Odak: Konya’dan Türkiye’ye</h3><p>Mikro Yazılım satış, eğitim ve destek hizmetlerinde görünürlüğünüzü artırın.</p></div><div className="product-tags">{products.slice(0, 3).map(p => <span className="pill" key={p}>{p}</span>)}</div></section>
         </>}
 
-        {view === "seo" && <section className="panel"><div className="panel-heading"><div><h2>Arama sorguları</h2><p>{metrics ? `Son senkronizasyon: ${date(metrics.syncedAt)}` : "Son 28 günlük sorgular ve ortalama konum"}</p></div><button className="button primary" onClick={sync} disabled={busy}><RefreshCw size={16} className={busy ? "spin" : ""}/>{busy ? "Senkronize ediliyor" : "Verileri senkronize et"}</button></div>{metrics?.queries.length ? <div className="table-wrap"><table><thead><tr><th>Arama sorgusu</th><th>Tıklama</th><th>Gösterim</th><th>Ort. konum</th></tr></thead><tbody>{metrics.queries.map(q => <tr key={q.query}><td>{q.query}</td><td>{format(q.clicks)}</td><td>{format(q.impressions)}</td><td>{format(q.position)}</td></tr>)}</tbody></table></div> : <Empty icon={Search} title="Arama verileri henüz yok" text="Search Console bağlantısı yapılandırıldıktan sonra gerçek arama sorgularını burada görüntüleyebilirsiniz."/>}{metrics?.errors.map(e => <p className="error-text" key={e}>{e}</p>)}<div className="panel-footer">GSC, GA4 ve Ads aynı tarih aralığında okunur. Son 3 gün, Search Console veri gecikmesi için dışarıda bırakılır.</div></section>}
+        {view === "seo" && <><section className="panel"><div className="panel-heading"><div><h2>Arama sorguları</h2><p>{metrics ? `Son senkronizasyon: ${date(metrics.syncedAt)}` : "Son 28 günlük sorgular ve ortalama konum"}</p></div><button className="button primary" onClick={sync} disabled={busy}><RefreshCw size={16} className={busy ? "spin" : ""}/>{busy ? "Senkronize ediliyor" : "Verileri senkronize et"}</button></div>{metrics?.queries.length ? <div className="table-wrap"><table><thead><tr><th>Arama sorgusu</th><th>Tıklama</th><th>Gösterim</th><th>Ort. konum</th></tr></thead><tbody>{metrics.queries.map(q => <tr key={q.query}><td>{q.query}</td><td>{format(q.clicks)}</td><td>{format(q.impressions)}</td><td>{format(q.position)}</td></tr>)}</tbody></table></div> : <Empty icon={Search} title="Arama verileri henüz yok" text="Search Console bağlantısı yapılandırıldıktan sonra gerçek arama sorgularını burada görüntüleyebilirsiniz."/>}{metrics?.errors.map(e => <p className="error-text" key={e}>{e}</p>)}<div className="panel-footer">GSC, GA4 ve Ads aynı tarih aralığında okunur. Son 3 gün, Search Console veri gecikmesi için dışarıda bırakılır.</div></section><section className="panel" style={{ marginTop: 24 }}><div className="panel-heading"><div><h2>SEO fırsatları</h2><p>En az 20 gösterim alan, ortalama konumu 4–20 arasındaki sorgular. Gösterime göre sıralanır.</p></div></div>{opportunities.length ? <div className="table-wrap"><table><thead><tr><th>Sorgu</th><th>Gösterim</th><th>Tıklama oranı</th><th>Konum</th><th>Aksiyon</th></tr></thead><tbody>{opportunities.map(q => { const task = workspace.tasks.find(t => t.category === "SEO" && t.title === `“${q.query}” sorgusu için ilgili sayfanın başlık, açıklama ve içeriğini iyileştir` && !t.done); return <tr key={q.query}><td>{q.query}</td><td>{format(q.impressions)}</td><td>%{format(q.ctr)}</td><td>{format(q.position)}</td><td><button className="button secondary" disabled={!!task} onClick={() => save({ ...workspaceRef.current, tasks: [opportunityTask(q.query), ...workspaceRef.current.tasks] })}>{task ? "Görev eklendi" : "Göreve dönüştür"}</button></td></tr>; })}</tbody></table></div> : <Empty icon={Target} title="Uygun sorgu bulunamadı" text="Hesap verilerini senkronize edin. Koşullara uyan sorgular burada listelenir."/>}</section></>}
 
-        {view === "ads" && <><div className="approval-banner"><ShieldCheck size={22}/><div><strong>Kontrol sizde.</strong><p>Taslak onayı yalnızca bu panelde kaydedilir. Bu sürüm Google Ads hesabında reklam yayınlamaz veya bütçe değiştirmez.</p></div></div><div className="section-heading"><h2>Kampanya taslakları <span className="count-label">{workspace.campaigns.length}</span></h2><button className="button primary" onClick={() => { setEditingCampaign(null); setModal("campaign"); }}><Plus size={16}/> Taslak oluştur</button></div>{workspace.campaigns.length ? <div className="campaign-grid">{workspace.campaigns.map(c => <section className="panel campaign-card" key={c.id}><div className="campaign-top"><span className="icon-box"><Megaphone size={19}/></span><span className={`pill ${c.status === "Onaylandı" ? "teal" : ""}`}>{c.status}</span></div><h3>{c.product}</h3><p className="campaign-location"><Globe size={14}/>{c.city} · Arama ağı</p><div className="ad-preview"><small>REKLAM TASLAĞI · farkyazilim.com</small><strong>{c.title}</strong><p>{c.description}</p></div><div className="budget"><span>Önerilen günlük bütçe</span><strong>{format(c.dailyBudget)} TL</strong></div><div className="card-actions"><button className="text-button" onClick={() => { setEditingCampaign(c); setModal("campaign"); }}>Düzenle</button><button className="text-button" onClick={() => { if (window.confirm("Bu kampanya taslağı silinsin mi?")) save({ ...workspace, campaigns: workspace.campaigns.filter(x => x.id !== c.id) }); }}>Sil</button><button className="button secondary" onClick={() => exportFile(`${c.product.replaceAll(" ", "-")}-taslak.json`, JSON.stringify(c, null, 2), "application/json")}><Download size={15}/> İndir</button>{c.status === "Taslak" && <button className="button primary" onClick={() => save({ ...workspace, campaigns: workspace.campaigns.map(x => x.id === c.id ? { ...x, status: "İnceleme" } : x) })}>İncelemeye al</button>}{c.status === "İnceleme" && <button className="button primary" onClick={() => setApproval(c.id)}>Taslağı onayla</button>}{c.status === "Onaylandı" && <button className="text-button" onClick={() => save({ ...workspace, campaigns: workspace.campaigns.map(x => x.id === c.id ? { ...x, status: "Taslak" } : x) })}>Taslağa döndür</button>}</div></section>)}</div> : <section className="panel"><Empty icon={Megaphone} title="İlk kampanya taslağınızı hazırlayın" text="Ürününüzü, hedef bölgenizi ve önerilen bütçenizi seçin. Reklam metnini düzenleyip incelemeye alabilirsiniz."/></section>}</>}
+        {view === "ads" && <><div className="approval-banner"><ShieldCheck size={22}/><div><strong>Kontrol sizde.</strong><p>Taslak onayı yalnızca bu panelde kaydedilir. Bu sürüm Google Ads hesabında reklam yayınlamaz veya bütçe değiştirmez.</p></div></div><div className="section-heading"><h2>Kampanya taslakları <span className="count-label">{workspace.campaigns.length}</span></h2><button className="button secondary" disabled={!workspace.campaigns.length} onClick={() => exportFile("fark-kampanyalar.csv", campaignsCsv(workspace.campaigns), "text/csv;charset=utf-8")}><Download size={16}/> CSV indir</button><button className="button primary" onClick={() => { setEditingCampaign(null); setModal("campaign"); }}><Plus size={16}/> Taslak oluştur</button></div>{workspace.campaigns.length ? <div className="campaign-grid">{workspace.campaigns.map(c => <section className="panel campaign-card" key={c.id}><div className="campaign-top"><span className="icon-box"><Megaphone size={19}/></span><span className={`pill ${c.status === "Onaylandı" ? "teal" : ""}`}>{c.status}</span></div><h3>{c.product}</h3><p className="campaign-location"><Globe size={14}/>{c.city} · Arama ağı</p><div className="ad-preview"><small>REKLAM TASLAĞI · farkyazilim.com</small><strong>{c.title}</strong><p>{c.description}</p></div><div className="budget"><span>Önerilen günlük bütçe</span><strong>{format(c.dailyBudget)} TL</strong></div><div className="card-actions"><button className="text-button" onClick={() => { setEditingCampaign(c); setModal("campaign"); }}>Düzenle</button><button className="text-button" onClick={() => { if (window.confirm("Bu kampanya taslağı silinsin mi?")) save({ ...workspace, campaigns: workspace.campaigns.filter(x => x.id !== c.id) }); }}>Sil</button><button className="button secondary" onClick={() => exportFile(`${c.product.replaceAll(" ", "-")}-taslak.json`, JSON.stringify(c, null, 2), "application/json")}><Download size={15}/> İndir</button>{c.status === "Taslak" && <button className="button primary" onClick={() => save({ ...workspace, campaigns: workspace.campaigns.map(x => x.id === c.id ? { ...x, status: "İnceleme" } : x) })}>İncelemeye al</button>}{c.status === "İnceleme" && <button className="button primary" onClick={() => setApproval(c.id)}>Taslağı onayla</button>}{c.status === "Onaylandı" && <button className="text-button" onClick={() => save({ ...workspace, campaigns: workspace.campaigns.map(x => x.id === c.id ? { ...x, status: "Taslak" } : x) })}>Taslağa döndür</button>}</div></section>)}</div> : <section className="panel"><Empty icon={Megaphone} title="İlk kampanya taslağınızı hazırlayın" text="Ürününüzü, hedef bölgenizi ve önerilen bütçenizi seçin. Reklam metnini düzenleyip incelemeye alabilirsiniz."/></section>}</>}
 
         {view === "tasks" && <section className="panel"><div className="panel-heading"><div><h2>Görev listesi</h2><p>{finished} / {workspace.tasks.length} görev tamamlandı</p></div><button className="button primary" onClick={() => { setEditingTask(null); setModal("task"); }}><Plus size={16}/> Görev ekle</button></div><div className="toolbar"><div className="tabs">{["Tümü", "Açık", "Tamamlanan"].map(f => <button key={f} className={filter === f ? "selected" : ""} onClick={() => setFilter(f)}>{f}</button>)}</div><label className="search-field"><Search size={16}/><input aria-label="Görevlerde ara" placeholder="Görevlerde ara..." value={query} onChange={e => setQuery(e.target.value)}/></label></div><div className="task-list">{taskList.map(t => <TaskRow key={t.id} task={t} onEdit={() => { setEditingTask(t); setModal("task"); }} onDelete={() => { if (window.confirm("Bu görev silinsin mi?")) save({ ...workspace, tasks: workspace.tasks.filter(x => x.id !== t.id) }); }} onToggle={() => save({ ...workspace, tasks: workspace.tasks.map(x => x.id === t.id ? { ...x, done: !x.done } : x) })}/>)}{!taskList.length && <Empty icon={CheckSquare} title="Bu görünümde görev yok" text="Aramayı temizleyin veya yeni bir görev ekleyin."/>}</div></section>}
 
