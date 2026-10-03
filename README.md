@@ -2,7 +2,7 @@
 
 Fark Yazılım için SEO ve Google Ads çalışma alanı. Next.js 16, TypeScript, React ve Supabase ile hazırlanmıştır.
 
-## İlk sürümde çalışan özellikler
+## Özellikler (v0.3)
 
 - Türkçe, mobil uyumlu pazarlama paneli.
 - Görev ekleme, düzenleme, silme, tamamlama, filtreleme ve arama.
@@ -10,7 +10,7 @@ Fark Yazılım için SEO ve Google Ads çalışma alanı. Next.js 16, TypeScript
 - Kampanya taslaklarını Türkçe karakterleri koruyan, elektronik tablo formüllerine karşı korumalı CSV olarak indirme.
 - Türkiye saatinde rapor tarihleri, zaman aşımı ve tekrar deneme ekranı. Senkronizasyon/AI raporu sırasında yapılan görev değişiklikleri korunur.
 - Mikro Jump, Mikro Fly, e-Dönüşüm, ERP ve MRP için düzenlenebilir ve silinebilir kampanya taslakları.
-- Taslak → İnceleme → Onaylandı akışı; onaylar **Google Ads'te yayınlama yapmaz**.
+- Eski kampanya taslakları için arşiv akışı; arşivdeki durum değişikliği Google Ads'te yayın yapmaz. Gerçek kampanyalar ayrı Google Ads otomasyonu panelinden yönetilir.
 - Yerel tarayıcı kaydı, JSON yedekleme ve geri yükleme.
 - Supabase ile e-posta/parola girişi ve kullanıcıya özel bulut kayıtları.
 - Sunucudan Search Console sorguları, GA4 oturumları ve Google Ads harcaması okuma.
@@ -18,6 +18,12 @@ Fark Yazılım için SEO ve Google Ads çalışma alanı. Next.js 16, TypeScript
 - RLS ile veri izolasyonu, sunucuda e-posta izin listesi ve kullanıcı başına saatlik 5 AI rapor limiti.
 
 Hesap bağlantıları kurulmadan görevler ve taslaklar yerel modda çalışır; performans rakamları boş görünür. Entegrasyonların gerçek hesaplarla uçtan uca testi için ilgili hesap erişimleri gerekir.
+
+## Google Ads canlı otomasyonu
+
+Ürün ve bölge parametrelerinden Arama Ağı kampanyası, ürün reklam grupları, duyarlı arama reklamları ve anahtar kelimeler oluşturulur. Değiştirilemez plan → Google doğrulaması → duraklatılmış oluşturma onayı → ayrı yayın/harcama onayı akışı vardır. Bütçe ayarları onaylı aralıkta yapılır; aylık izleme, manuel duraklatmayı koruma, acil durdurma, işlem kilidi ve audit geçmişi bulunur.
+
+Kurulum, örnek bütçe, zamanlayıcı ve kabul adımları: [Ads kurulum rehberi](deployment/ADS_KURULUM.md). Canlı hesap doğrulaması tamamlanmadan gerçek entegrasyonun hazır olduğu varsayılmamalıdır.
 
 ## Vercel'e ilk yayın
 
@@ -48,10 +54,10 @@ Bu ilk sürüm, sunucuda saklanan bir Google OAuth bağlantısını izinli kulla
 4. Vercel ortam değişkenlerine `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN` ekleyin.
 5. Search Console'daki mülkün tam adresini `GSC_SITE_URL` olarak girin. URL-prefix için örnek: `https://www.farkyazilim.com/`; domain property kullanılıyorsa `sc-domain:farkyazilim.com`.
 6. GA4 sayısal mülk ID'sini `GA4_PROPERTY_ID` olarak girin. Ölçüm ID'si (`G-...`) kullanılmaz.
-7. Ads için `GOOGLE_ADS_CUSTOMER_ID`, `GOOGLE_ADS_DEVELOPER_TOKEN`, güncel desteklenen `GOOGLE_ADS_API_VERSION` ve gerekiyorsa `GOOGLE_ADS_LOGIN_CUSTOMER_ID` ekleyin.
+7. Ads için `GOOGLE_ADS_CUSTOMER_ID`, güncel desteklenen `GOOGLE_ADS_API_VERSION` ve gerekiyorsa `GOOGLE_ADS_LOGIN_CUSTOMER_ID` ekleyin.
 8. Redeploy yapıp izinli kullanıcıyla giriş yapın; **SEO analizi → Verileri senkronize et**. Her servisin hata durumu ayrı gösterilir.
 
-`adwords` kapsamı Google tarafından okuma/yazma olarak verilir; bu uygulamada yalnızca rapor okuyan SearchStream isteği vardır. Reklam/bütçe değiştiren endpoint bulunmaz.
+`adwords` kapsamı Google tarafından okuma/yazma olarak verilir. Rapor okuma servisinden ayrı Ads otomasyon endpointleri, hesap sahibi doğrulaması, sunucu yazma bayrağı ve kayıtlı plan onayı ister. Eski developer token isteğe bağlıdır; 9 Eylül 2026 sonrasında API erişimi Google Cloud projesine bağlıdır.
 
 ## OpenAI raporları
 
@@ -79,7 +85,7 @@ Otomasyon raporları ayrı `scheduled_reports` tablosunda tutulur ve panelde gö
 ## Kapsam dışında kalan işlemler
 
 - GitHub/Vercel deploy bildirimleri ve diğer Slack kanallarına otomatik uyarılar.
-- Google Ads'e kampanya yayınlama veya bütçe değişikliği.
+- Display, YouTube, Shopping ve Performance Max kampanyaları; bu sürüm Arama Ağına odaklanır.
 - Web sitesine içerik yayınlama ve çok müşterili SaaS.
 
 ## Yerel geliştirme ve doğrulama
@@ -94,6 +100,8 @@ npm run build
 npm start
 # Ayrı terminalde, çalışan sunucuya karşı API kontrolleri:
 TEST_BASE_URL=http://localhost:3000 node tests/api.test.mjs
+npx playwright install chromium
+TEST_BASE_URL=http://localhost:3000 npm run test:ui
 ```
 
 Gerçek entegrasyonlarla geliştirmek için `.env.example` dosyasını `.env.local` olarak kopyalayın, değerleri güvenli biçimde doldurun. `.env.local` Git'e eklenmez.

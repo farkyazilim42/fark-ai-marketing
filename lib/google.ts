@@ -36,7 +36,8 @@ export async function collectMetrics(): Promise<Metrics> {
         try {
           const customer = process.env.GOOGLE_ADS_CUSTOMER_ID!.replace(/-/g, "");
           const version = process.env.GOOGLE_ADS_API_VERSION!;
-          const extra: Record<string, string> = { "developer-token": process.env.GOOGLE_ADS_DEVELOPER_TOKEN! };
+          const extra: Record<string, string> = {};
+          if (process.env.GOOGLE_ADS_DEVELOPER_TOKEN) extra["developer-token"] = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
           if (process.env.GOOGLE_ADS_LOGIN_CUSTOMER_ID) extra["login-customer-id"] = process.env.GOOGLE_ADS_LOGIN_CUSTOMER_ID.replace(/-/g, "");
           const data = await googlePost(`https://googleads.googleapis.com/${version}/customers/${customer}/googleAds:searchStream`, token, { query: `SELECT customer.currency_code, metrics.cost_micros FROM customer WHERE segments.date BETWEEN '${start}' AND '${end}'` }, extra);
           const rows = (Array.isArray(data) ? data : []).flatMap(b => b.results || []);
