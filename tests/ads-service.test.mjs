@@ -11,14 +11,14 @@ const source = (await readFile(new URL('../lib/ads-service.ts', import.meta.url)
   .replace(/import \{ googleToken \} from "\.\/server";\n/, '')
   .replace(/from "\.\/ads-model"/g, `from ${JSON.stringify(new URL('../lib/ads-model.ts', import.meta.url).href)}`);
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
-const { createAdsService, hashAdsPlan } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`);
+const { createAdsService, hashAdsPlan, runAdsMonitorCycle } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`);
 const time = new Date('2026-10-03T08:00:00Z');
 const pid = '11111111-1111-4111-8111-111111111111';
 const resources = { campaignResourceName: 'customers/1234567890/campaigns/1', budgetResourceName: 'customers/1234567890/campaignBudgets/2', googleName: 'FARK-AI-test' };
 function fixture(options = {}) {
   const plan = { ...adsDefaultPlan(), startDate: '2026-10-01', endDate: '2026-10-30', ...options.plan };
   let record = { id: pid, user_id: 'owner', customer_id: '1234567890', plan, plan_hash: hashAdsPlan(plan), status: 'validated', operation_id: '22222222-2222-4222-8222-222222222222', resources: null, validated_at: time.toISOString(), approved_at: time.toISOString(), activated_at: null, last_optimized_local_day: null, created_at: time.toISOString(), updated_at: time.toISOString(), ...options.record };
-  let lock = null;
+  let lock = options.initialLock || null;
   const events = [];
   const google = {
     account: async () => ({ customerId: '1234567890', currencyCode: 'TRY', timeZone: 'Europe/Istanbul', manager: false }),
@@ -34,7 +34,7 @@ function fixture(options = {}) {
   };
   const store = {
     get: async () => structuredClone(record),
-    list: async () => ({ plans: [structuredClone(record)], runs: [], accountLock: lock }),
+    list: async () => ({ plans: [structuredClone(record)], runs: options.runs || [], accountLock: lock }),
     insert: async next => { record = structuredClone(next); events.push('insert'); },
     claim: async (_rec, runId, action, expected, next) => {
       if (lock) throw new Error('LOCKED');
@@ -140,4 +140,61 @@ test('removal requires explicit confirmation and previously paused Google status
 test('Google manual removal can be read-only reconciled to permit a replacement', async () => {
   const f = fixture({ record: { status: 'paused', resources }, actualStatus: 'REMOVED' });
   await f.service.action('recover', pid, f.record().plan_hash); assert.equal(f.record().status, 'removed'); assert.deepEqual(f.events, ['intent', 'finish:completed']);
+});
+
+const staleLock = { customer_id: '1234567890', user_id: 'owner', run_id: '44444444-4444-4444-8444-444444444444', plan_id: pid, created_at: '2026-10-03T07:45:00Z' };
+test('stale ambiguous activation, budget or pause is read-reconciled then separately audited PAUSED', async () => {
+  for (const action of ['activate', 'optimize', 'pause']) {
+    const f = fixture({ record: { status: 'unknown', resources }, initialLock: { ...staleLock }, runs: [{ id: staleLock.run_id, action, status: 'unknown' }] });
+    const calls = [];
+    const originalSnapshot = f.google.snapshot;
+    f.google.snapshot = async value => { f.events.push('read-status'); return originalSnapshot(value); };
+    const result = await runAdsMonitorCycle(await f.store.list(), async body => { calls.push(body.action); return f.service.action(body.action, body.planId, body.planHash); }, time);
+    assert.deepEqual(calls, ['recover', 'pause']);
+    assert.deepEqual(f.events, ['read-status', 'finish:completed', 'intent', 'PAUSED', 'finish:completed']);
+    assert.equal(result.paused, true); assert.equal(f.record().status, 'paused'); assert.equal(f.lock(), null);
+    assert.ok(!f.events.includes('ENABLED')); assert.ok(!f.events.some(value => value.startsWith('budget:')));
+  }
+});
+test('recent account lock is not reclaimed or mutated by cron', async () => {
+  const f = fixture({ record: { status: 'unknown', resources }, initialLock: { ...staleLock, created_at: '2026-10-03T07:55:00Z' } });
+  const result = await runAdsMonitorCycle(await f.store.list(), async () => { throw new Error('must not run'); }, time);
+  assert.equal(result.skipped, true); assert.deepEqual(f.events, []); assert.ok(f.lock());
+});
+test('failed stale reconciliation read preserves lock and reports manual attention', async () => {
+  const f = fixture({ record: { status: 'unknown', resources }, initialLock: { ...staleLock }, runs: [{ id: staleLock.run_id, action: 'activate', status: 'unknown' }] });
+  f.google.snapshot = async () => { throw new Error('Google status unavailable'); };
+  const calls = [];
+  const result = await runAdsMonitorCycle(await f.store.list(), async body => { calls.push(body.action); return f.service.action(body.action, body.planId, body.planHash); }, time);
+  assert.deepEqual(calls, ['recover']); assert.equal(result.blocked, true); assert.equal(result.manualReviewRequired, true); assert.ok(f.lock()); assert.deepEqual(f.events, []);
+});
+test('already-paused reconciliation never repeats the unknown original mutation', async () => {
+  const f = fixture({ record: { status: 'unknown', resources }, actualStatus: 'PAUSED', initialLock: { ...staleLock }, runs: [{ id: staleLock.run_id, action: 'optimize', status: 'unknown' }] });
+  const calls = [];
+  const result = await runAdsMonitorCycle(await f.store.list(), async body => { calls.push(body.action); return f.service.action(body.action, body.planId, body.planHash); }, time);
+  assert.deepEqual(calls, ['recover']); assert.equal(result.paused, false); assert.equal(f.record().status, 'paused'); assert.deepEqual(f.events, ['finish:completed']);
+});
+test('concurrent claim after read recovery never causes a retry of original or protective mutation', async () => {
+  const f = fixture({ record: { status: 'unknown', resources }, initialLock: { ...staleLock } });
+  const calls = [];
+  const result = await runAdsMonitorCycle(await f.store.list(), async body => {
+    calls.push(body.action);
+    if (body.action === 'recover') return { message: 'read complete', plan: { ...f.record(), status: 'active' } };
+    throw new Error('ADS_ACCOUNT_LOCKED');
+  }, time);
+  assert.deepEqual(calls, ['recover', 'pause']); assert.equal(result.blocked, true); assert.equal(result.manualReviewRequired, true);
+});
+
+test('policy reporting failure cannot block confirmed active recovery and protective pause', async () => {
+  const f = fixture({ record: { status: 'unknown', resources }, initialLock: { ...staleLock }, runs: [{ id: staleLock.run_id, action: 'activate', status: 'unknown' }] });
+  f.google.policy = async () => { throw new Error('policy API unavailable'); };
+  const result = await runAdsMonitorCycle(await f.store.list(), body => f.service.action(body.action, body.planId, body.planHash), time);
+  assert.equal(result.paused, true); assert.equal(f.record().status, 'paused'); assert.ok(f.events.includes('PAUSED')); assert.equal(f.lock(), null);
+});
+test('ambiguous protective pause retains its new mutex without automatic retry', async () => {
+  const f = fixture({ record: { status: 'unknown', resources }, initialLock: { ...staleLock }, runs: [{ id: staleLock.run_id, action: 'optimize', status: 'unknown' }] });
+  let pauseCalls = 0;
+  f.google.status = async (_resources, status) => { assert.equal(status, 'PAUSED'); pauseCalls++; throw new Error('pause timeout'); };
+  const result = await runAdsMonitorCycle(await f.store.list(), body => f.service.action(body.action, body.planId, body.planHash), time);
+  assert.equal(result.blocked, true); assert.equal(pauseCalls, 1); assert.equal(f.record().status, 'unknown'); assert.ok(f.lock()); assert.notEqual(f.lock().run_id, staleLock.run_id);
 });

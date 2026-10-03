@@ -110,7 +110,7 @@ export function createAdsService(deps: { store: AdsStore; google: AdsGoogle; use
           return withLock(record, "recover", ["paused", "active", "removed"], record.status, async () => {
             const found = await snapshot(record);
             if (!["ENABLED", "PAUSED", "REMOVED"].includes(found.status)) throw new AdsServiceError("Google kampanya durumu kesinleştirilemedi.", 409);
-            const policy = found.status === "REMOVED" ? null : await deps.google.policy(found);
+            const policy = found.status === "REMOVED" ? null : await deps.google.policy(found).catch(() => null);
             return { result: { found, policy, recovered: true }, patch: { resources: found, status: found.status === "ENABLED" ? "active" : found.status === "REMOVED" ? "removed" : "paused" }, message: "Google üzerindeki kampanya durumu eşitlendi." };
           });
         }
@@ -125,7 +125,7 @@ export function createAdsService(deps: { store: AdsStore; google: AdsGoogle; use
         const account = await deps.google.account(); accountMatches(account, record.plan);
         const found = record.resources ? await snapshot(record) : await deps.google.find(record.operation_id);
         if (!found || !["ENABLED", "PAUSED", "REMOVED"].includes(found.status)) throw new AdsServiceError("Google sonucu kesinleştirilemedi. Kilit korundu; Ads hesabını ve işlem günlüğünü kontrol edin.", 409);
-        const policy = await deps.google.policy(found);
+        const policy = found.status === "REMOVED" ? null : await deps.google.policy(found).catch(() => null);
         await deps.store.finish(accountLock.run_id, "completed", { recovered: true, found, policy, reconciledAt: now().toISOString() }, null, { resources: found, last_optimized_local_day: localDate(found.timeZone), status: found.status === "ENABLED" ? "active" : found.status === "REMOVED" ? "removed" : "paused" }, true);
         return { message: "Google hesabı salt okunur sorguyla uzlaştırıldı; kampanya durumu kaydedildi.", result: { found, policy }, plan: await deps.store.get(record.id) };
       }
@@ -300,6 +300,38 @@ export async function runAdsAction(userId: string, body: Record<string, unknown>
   }
   return service.action(String(body.action || ""), body.planId, body.planHash, body.confirmation);
 }
+/** A stale uncertain write must not silently disable spend protection forever.
+ * Reconciliation is read-only at Google; the only subsequent write is a separately
+ * audited PAUSE. Never retry the original create, enable, remove, or budget update.
+ */
+export async function runAdsMonitorCycle(
+  state: { plans: AdsPlanRecord[]; accountLock: AdsLock | null },
+  runAction: (body: Record<string, unknown>) => Promise<{ message: string; plan?: AdsPlanRecord; result?: unknown }>,
+  now = new Date()
+) {
+  if (state.accountLock) {
+    const age = now.getTime() - Date.parse(state.accountLock.created_at);
+    if (!Number.isFinite(age) || age < 10 * 60_000) return { message: "Hesapta devam eden işlem var; güvenli uzlaştırma süresi bekleniyor.", skipped: true };
+    const plan = state.plans.find(candidate => candidate.id === state.accountLock!.plan_id);
+    if (!plan) return { message: "Kilitli plan okunamadı. Ads hesabından kampanyayı duraklatıp işlem günlüğünü kontrol edin.", blocked: true, manualReviewRequired: true };
+    try {
+      const recovered = await runAction({ action: "recover", planId: plan.id, planHash: plan.plan_hash });
+      if (!recovered.plan) throw new AdsServiceError("Uzlaştırılan kampanya durumu alınamadı.", 503);
+      if (recovered.plan.status === "active") {
+        const paused = await runAction({ action: "pause", planId: recovered.plan.id, planHash: recovered.plan.plan_hash });
+        return { message: "Belirsiz işlem Google hesabıyla uzlaştırıldı ve kampanya koruyucu olarak duraklatıldı. Yeniden yayın için açık onay gerekir.", recovered: true, paused: true, results: [recovered, paused] };
+      }
+      return { message: "Belirsiz işlem salt okunur sorguyla uzlaştırıldı. Yeniden yayın veya bütçe işlemi yapılmadı.", recovered: true, paused: false, results: [recovered] };
+    } catch (error) {
+      // Any failed read/claim stays fail-closed. In particular, never retry the original uncertain mutation.
+      return { message: `Uzlaştırma veya koruyucu duraklatma tamamlanamadı: ${message(error)} Ads hesabından durumu kontrol edip gerekirse doğrudan duraklatın.`, blocked: true, manualReviewRequired: true };
+    }
+  }
+  const results = [];
+  for (const plan of state.plans.filter(candidate => candidate.status === "active")) results.push(await runAction({ action: "optimize", planId: plan.id, planHash: plan.plan_hash }));
+  return { message: "Ads otomasyon kontrolü tamamlandı.", results };
+}
+
 export async function runAdsOptimization() {
   const config = adsAutomationStatus();
   if (!config.ready || !config.automationEnabled || !config.mutationsEnabled) throw new AdsServiceError("Ads zamanlayıcısı kapalı veya gerekli bağlantılar eksik.", 409);
@@ -307,10 +339,6 @@ export async function runAdsOptimization() {
   await ownerVerified(userId);
   const { error: heartbeatError } = await dbClient().rpc("ads_heartbeat", { p_customer_id: config.customerId, p_user_id: userId });
   if (heartbeatError) throw new AdsServiceError("Zamanlayıcı kontrol kaydı yazılamadı; Ads işlemi yapılmadı.", 503);
-  const { plans, accountLock } = await createAdsStore(userId, config.customerId).list();
-  if (accountLock) return { message: "Hesap kilitli; belirsiz işlem tekrar edilmedi.", skipped: true };
-  const active = plans.filter(p => p.status === "active");
-  const results = [];
-  for (const plan of active) results.push(await runAdsAction(userId, { action: "optimize", planId: plan.id, planHash: plan.plan_hash }));
-  return { message: "Ads otomasyon kontrolü tamamlandı.", results };
+  const state = await createAdsStore(userId, config.customerId).list();
+  return runAdsMonitorCycle(state, body => runAdsAction(userId, body));
 }

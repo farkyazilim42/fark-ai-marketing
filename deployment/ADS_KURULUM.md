@@ -55,7 +55,9 @@ Google günlük ortalama bütçeyi bazı günlerde iki katına kadar harcayabili
 
 ## Belirsiz sonuç ve müdahale
 
-İşlem niyeti ve hesap kilidi Google isteğinden önce veritabanına kaydedilir. Zaman aşımı veya sonuç kaydı hatasında istek otomatik tekrarlanmaz; hesap kilitli kalır. **Uzlaştır** Google'dan salt okunur sorgu yapar. Sonuç kesinleşmeden ikinci kampanya oluşturulmaz. Devam eden işlemi kesmemek için 10 dakika bekleme uygulanır. Kampanyanın oluşmadığı kesinleştirilemiyorsa kilit elle silinmez. Acil durumda Ads hesabından kampanyayı doğrudan duraklatın; ardından sonucu uzlaştırın.
+İşlem niyeti ve hesap kilidi Google isteğinden önce veritabanına kaydedilir. Zaman aşımı veya sonuç kaydı hatasında istek otomatik tekrarlanmaz; hesap kilitli kalır. **Uzlaştır** Google'dan salt okunur sorgu yapar. Sonuç kesinleşmeden ikinci kampanya oluşturulmaz. Devam eden işlemi kesmemek için 10 dakika bekleme uygulanır.
+
+Zamanlayıcı, bekleme süresini geçen kilidi salt okunur kontrolle uzlaştırır. Google kampanyası etkin görünüyorsa ayrı işlem kaydıyla koruyucu duraklatma yapar; aynı kontrol turunda bütçe değiştirmez veya reklamı yeniden açmaz. Sonuç okunamıyorsa kilit korunur. API/veritabanı kesintisi sırasında Google'a ulaşmak mümkün olmayabilir; acil durumda Ads hesabından kampanyayı doğrudan duraklatın, ardından sonucu uzlaştırın. Kampanyanın oluşmadığı kesinleştirilemiyorsa kilit elle silinmez.
 
 ## Kabul kontrolü
 
@@ -67,7 +69,7 @@ Google günlük ortalama bütçeyi bazı günlerde iki katına kadar harcayabili
 
 ### 3 Ekim 2026 teslim doğrulaması
 
-- 60 birim/API testi, TypeScript kontrolü ve üretim derlemesi başarılı.
+- 67 birim/API testi, TypeScript kontrolü ve üretim derlemesi başarılı.
 - Gerçek Chromium ile dört reklam grubunda bağımsız düzenleme, bölge doğrulama kapısı, kuruş hassasiyeti, bütçe hataları, taslak kalıcılığı, JSON dışa aktarımı ve 390 px mobil yerleşim doğrulandı. Testler Ads yazma isteği göndermedi.
 - Mevcut Supabase projesine Ads migration uygulandı. Gerçek veritabanında sahipler arası okuma izolasyonu, yetkisiz yazma/RPC engeli, değişmez plan ve eşzamanlı hesap kilidi test edildi; test verileri geri alındı.
 - Gerçek Google hesabında doğrulama, duraklatılmış kampanya oluşturma ve harcama testi **henüz yapılmadı**. OAuth/Ads erişimi, yönetici kullanıcı, Vercel ortam değişkenleri ve çalışan sık zamanlayıcı bağlantısı gerekiyor.
