@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.FiyatGor" parent="Theme.MaterialComponents.Light.DarkActionBar">
+        <item name="colorPrimary">#C62828</item>
+        <item name="colorPrimaryVariant">#8E0000</item>
+        <item name="colorSecondary">#1565C0</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+    </style>
+
+    <style name="Theme.FiyatGor.Kiosk" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <item name="colorPrimary">#C62828</item>
+        <item name="colorSecondary">#1565C0</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowBackground">@android:color/white</item>
+    </style>
+
+    <style name="InfoTile">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:background">@drawable/bg_tile</item>
+        <item name="android:gravity">center</item>
+        <item name="android:minHeight">92dp</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:padding">12dp</item>
+    </style>
+
+    <style name="InfoTileLabel">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:letterSpacing">0.12</item>
+        <item name="android:textColor">#94A3B8</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="InfoTileValue">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">6dp</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:fontFamily">monospace</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:textColor">#111827</item>
+        <item name="android:textSize">22sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+</resources>
