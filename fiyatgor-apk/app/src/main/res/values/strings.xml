@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Fiyat Gör</string>
+    <!-- Overrides androidx.preference's summary for empty fields so it is Turkish on every device locale. -->
+    <string name="not_set">Ayarlanmadı</string>
+</resources>

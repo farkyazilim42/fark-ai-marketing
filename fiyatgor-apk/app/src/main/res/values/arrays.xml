@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="vat_mode_entries">
+        <item>Fiyat listesindeki gibi göster</item>
+        <item>Her zaman KDV dahil göster (gerekirse KDV ekle)</item>
+    </string-array>
+    <string-array name="vat_mode_values">
+        <item>as_is</item>
+        <item>include</item>
+    </string-array>
+
+    <string-array name="currency_entries">
+        <item>TL (1.234,50 TL)</item>
+        <item>₺ (₺1.234,50)</item>
+    </string-array>
+    <string-array name="currency_values">
+        <item>TL</item>
+        <item>₺</item>
+    </string-array>
+
+    <string-array name="orientation_entries">
+        <item>Otomatik (cihaza göre)</item>
+        <item>Yatay</item>
+        <item>Dikey</item>
+        <item>Yatay (sabit, sensörsüz)</item>
+        <item>Dikey (sabit, sensörsüz)</item>
+    </string-array>
+    <string-array name="orientation_values">
+        <item>auto</item>
+        <item>landscape</item>
+        <item>portrait</item>
+        <item>landscape_fixed</item>
+        <item>portrait_fixed</item>
+    </string-array>
+
+    <string-array name="scan_end_entries">
+        <item>Otomatik (Enter, Tab veya zaman aşımı)</item>
+        <item>Enter</item>
+        <item>Tab veya Enter</item>
+        <item>Yalnızca zaman aşımı</item>
+    </string-array>
+    <string-array name="scan_end_values">
+        <item>auto</item>
+        <item>enter</item>
+        <item>tab</item>
+        <item>timeout</item>
+    </string-array>
+</resources>

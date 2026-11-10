@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.FiyatGor" parent="Theme.MaterialComponents.Light.DarkActionBar">
+        <item name="colorPrimary">#C62828</item>
+        <item name="colorPrimaryVariant">#8E0000</item>
+        <item name="colorSecondary">#1565C0</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+    </style>
+
+    <style name="Theme.FiyatGor.Kiosk" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <item name="colorPrimary">#C62828</item>
+        <item name="colorSecondary">#1565C0</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowBackground">@android:color/white</item>
+    </style>
+</resources>

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory app:title="Veritabanı Bağlantısı (Mikro v17 / SQL Server)" app:iconSpaceReserved="false">
+        <EditTextPreference app:key="db_host" app:title="Sunucu IP / adı" app:dialogMessage="Örn. 192.168.1.10" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="db_port" app:title="Port" app:dialogMessage="Varsayılan 1433. Named instance dinamik port kullanıyorsa boş bırakın." app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="db_instance" app:title="Instance adı" app:dialogMessage="Örn. MIKRO veya SQLEXPRESS. Varsayılan instance için boş bırakın. Port girilirse instance adı yok sayılır." app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="db_user" app:title="SQL kullanıcı adı" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="db_password" app:title="SQL şifresi" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="db_name" app:title="Veritabanı adı" app:dialogMessage="Örn. MikroDB_V17_FIRMA" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <Preference app:key="db_pick" app:title="Sunucudaki veritabanlarından seç" app:summary="Bağlanıp veritabanı listesini getirir" app:iconSpaceReserved="false" />
+        <Preference app:key="db_test" app:title="Bağlantıyı test et" app:summary="Sunucuya bağlanır ve Mikro tablolarını kontrol eder" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="db_login_timeout" app:title="Bağlantı zaman aşımı (sn)" app:defaultValue="5" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="db_query_timeout" app:title="Sorgu zaman aşımı (sn)" app:defaultValue="5" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="Fiyat" app:iconSpaceReserved="false">
+        <EditTextPreference app:key="price_list_no" app:title="Satış fiyat listesi no" app:defaultValue="1" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <Preference app:key="price_list_pick" app:title="Sunucudaki fiyat listelerinden seç" app:summary="STOK_SATIS_FIYAT_LISTE_TANIMLARI tablosundan" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="depot_no" app:title="Depo no" app:dialogMessage="0 = tüm depolar için tanımlı fiyat. Belirli bir depo girilirse önce o depo, sonra 0 aranır." app:defaultValue="0" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <SwitchPreferenceCompat app:key="depot_fallback" app:title="Başka depo fiyatına düş" app:summary="Seçili depo ve 0 için fiyat yoksa herhangi bir depodaki fiyatı göster" app:defaultValue="true" app:iconSpaceReserved="false" />
+        <ListPreference app:key="vat_mode" app:title="KDV gösterimi" app:entries="@array/vat_mode_entries" app:entryValues="@array/vat_mode_values" app:defaultValue="as_is" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <SwitchPreferenceCompat app:key="show_vat_note" app:title="&quot;KDV Dahil/Hariç&quot; yazısını göster" app:defaultValue="true" app:iconSpaceReserved="false" />
+        <SwitchPreferenceCompat app:key="stock_code_fallback" app:title="Barkod yoksa stok kodu olarak ara" app:defaultValue="true" app:iconSpaceReserved="false" />
+        <ListPreference app:key="currency_symbol" app:title="Para birimi gösterimi" app:entries="@array/currency_entries" app:entryValues="@array/currency_values" app:defaultValue="TL" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <SwitchPreferenceCompat app:key="show_stock_code" app:title="Stok kodunu göster" app:defaultValue="true" app:iconSpaceReserved="false" />
+        <SwitchPreferenceCompat app:key="show_barcode" app:title="Barkodu göster" app:defaultValue="true" app:iconSpaceReserved="false" />
+        <SwitchPreferenceCompat app:key="show_unit" app:title="Birimi göster" app:defaultValue="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="result_display_s" app:title="Ürün ekranda kalma süresi (sn)" app:dialogMessage="0 = bir sonraki okutmaya kadar ekranda kalır" app:defaultValue="15" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="Görünüm" app:iconSpaceReserved="false">
+        <Preference app:key="logo_pick" app:title="Firma logosu seç" app:summary="Cihaz hafızasından resim seçin" app:iconSpaceReserved="false" />
+        <Preference app:key="logo_clear" app:title="Varsayılan logoya dön" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="welcome_text" app:title="Bekleme ekranı yazısı" app:defaultValue="Fiyat öğrenmek için ürün barkodunu okutunuz" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="color_bg" app:title="Arka plan rengi" app:dialogMessage="#RRGGBB biçiminde, örn. #FFFFFF" app:defaultValue="#FFFFFF" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="color_text" app:title="Yazı rengi" app:defaultValue="#1A1A1A" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="color_price" app:title="Fiyat rengi" app:defaultValue="#C62828" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="font_name_sp" app:title="Ürün adı en büyük yazı boyutu (sp)" app:defaultValue="44" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="font_price_sp" app:title="Fiyat en büyük yazı boyutu (sp)" app:defaultValue="120" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <ListPreference app:key="orientation" app:title="Ekran yönü" app:entries="@array/orientation_entries" app:entryValues="@array/orientation_values" app:defaultValue="auto" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="Reklam" app:iconSpaceReserved="false">
+        <SwitchPreferenceCompat app:key="ads_enabled" app:title="Boşta reklam göster" app:defaultValue="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="idle_timeout_s" app:title="Reklam başlama süresi (sn)" app:dialogMessage="Son okutmadan/dokunmadan bu kadar saniye sonra reklam başlar" app:defaultValue="60" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="ad_image_s" app:title="Resim gösterim süresi (sn)" app:defaultValue="8" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <SwitchPreferenceCompat app:key="ad_mute" app:title="Videoları sessiz oynat" app:defaultValue="false" app:iconSpaceReserved="false" />
+        <Preference app:key="ad_summary" app:title="Seçili reklamlar" app:selectable="false" app:iconSpaceReserved="false" />
+        <Preference app:key="ad_pick_files" app:title="Resim/video dosyası ekle" app:summary="Birden fazla dosya seçebilirsiniz" app:iconSpaceReserved="false" />
+        <Preference app:key="ad_pick_folder" app:title="Reklam klasörü seç" app:summary="Klasördeki tüm resim ve videolar alfabetik sırayla oynatılır" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="ad_folder_path" app:title="Reklam klasörü yolu (elle)" app:dialogMessage="Dosya seçicisi olmayan cihazlar için, örn. /sdcard/Reklam" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <Preference app:key="ad_clear" app:title="Tüm reklam seçimlerini temizle" app:iconSpaceReserved="false" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="Barkod Okuyucu" app:iconSpaceReserved="false">
+        <SwitchPreferenceCompat app:key="scan_keyboard" app:title="Klavye (keyboard wedge) girişi" app:summary="Okuyucu klavye gibi yazıyorsa açık olmalı" app:defaultValue="true" app:iconSpaceReserved="false" />
+        <ListPreference app:key="scan_end" app:title="Okuma bitiş karakteri" app:entries="@array/scan_end_entries" app:entryValues="@array/scan_end_values" app:defaultValue="auto" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="scan_char_timeout_ms" app:title="Karakterler arası zaman aşımı (ms)" app:dialogMessage="Bitiş karakteri gelmezse bu süre sonunda okuma tamamlanır" app:defaultValue="120" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="scan_min_len" app:title="En kısa barkod uzunluğu" app:defaultValue="3" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <SwitchPreferenceCompat app:key="scan_broadcast" app:title="Yayın (broadcast intent) girişi" app:summary="Okuyucu servisi barkodu Intent ile gönderiyorsa" app:defaultValue="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="scan_actions" app:title="Broadcast action adları" app:dialogMessage="Virgülle ayırın. Cihazın okuyucu ayarındaki 'Broadcast action' değeriyle aynı olmalı." app:defaultValue="android.intent.ACTION_DECODE_DATA, com.android.server.scannerservice.broadcast, scan.rcv.message, nlscan.action.SCANNER_RESULT, com.barcode.sendBroadcast, android.intent.action.SCANRESULT, com.scanner.broadcast" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="scan_extra_key" app:title="Barkod extra adı" app:dialogMessage="Önce bu anahtar okunur; bulunamazsa yaygın anahtarlar (barcode_string, scannerdata, data, barocode…) denenir." app:defaultValue="barcode_string" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <Preference app:key="last_scan" app:title="Son okunan barkod (test)" app:selectable="false" app:iconSpaceReserved="false" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="Kiosk ve Güvenlik" app:iconSpaceReserved="false">
+        <SwitchPreferenceCompat app:key="launch_on_boot" app:title="Cihaz açılınca otomatik başlat" app:defaultValue="true" app:iconSpaceReserved="false" />
+        <Preference app:key="overlay_permission" app:title="Otomatik başlatma izni ver" app:summary="Android 10 ve üzerinde açılışta başlatma için 'Diğer uygulamaların üzerinde göster' izni gerekir" app:iconSpaceReserved="false" />
+        <SwitchPreferenceCompat app:key="home_app" app:title="Ana ekran (launcher) uygulaması olarak kullan" app:summary="Ana Sayfa tuşu her zaman Fiyat Gör'ü açar" app:defaultValue="false" app:iconSpaceReserved="false" />
+        <Preference app:key="home_settings" app:title="Varsayılan ana ekran ayarını aç" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="pin" app:title="Ayar PIN / şifresi" app:dialogMessage="Boş bırakılırsa ayarlar şifresiz açılır" app:defaultValue="1234" app:iconSpaceReserved="false" />
+        <Preference app:key="exit_app" app:title="Uygulamadan çık" app:iconSpaceReserved="false" />
+        <Preference app:key="about" app:title="Hakkında" app:selectable="false" app:iconSpaceReserved="false" />
+    </PreferenceCategory>
+</PreferenceScreen>
