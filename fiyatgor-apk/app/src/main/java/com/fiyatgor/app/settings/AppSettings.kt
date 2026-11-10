@@ -52,8 +52,12 @@ class AppSettings(context: Context) {
     val backgroundColor get() = color(K.COLOR_BG, "#FFFFFF")
     val textColor get() = color(K.COLOR_TEXT, "#1A1A1A")
     val priceColor get() = color(K.COLOR_PRICE, "#C62828")
-    val nameFontSp get() = int(K.FONT_NAME, 44, 12, 200)
-    val priceFontSp get() = int(K.FONT_PRICE, 120, 20, 400)
+    val nameFontSp get() = int(K.FONT_NAME, 72, 12, 300)
+    val priceFontSp get() = int(K.FONT_PRICE, 200, 20, 500)
+    val statusFontSp get() = int(K.FONT_STATUS, 48, 12, 200)
+    val clockFontSp get() = int(K.FONT_CLOCK, 56, 12, 200)
+    val clockVisible get() = bool(K.CLOCK_VISIBLE, true)
+    val logoHeightDp get() = int(K.LOGO_HEIGHT, 120, 24, 600)
     val orientation get() = str(K.ORIENTATION, "auto")
 
     val resultDisplaySec get() = int(K.RESULT_SECONDS, 15, 0, 3600)
@@ -111,6 +115,10 @@ class AppSettings(context: Context) {
         const val COLOR_PRICE = "color_price"
         const val FONT_NAME = "font_name_sp"
         const val FONT_PRICE = "font_price_sp"
+        const val FONT_STATUS = "font_status_sp"
+        const val FONT_CLOCK = "font_clock_sp"
+        const val CLOCK_VISIBLE = "clock_visible"
+        const val LOGO_HEIGHT = "logo_height_dp"
         const val ORIENTATION = "orientation"
         const val RESULT_SECONDS = "result_display_s"
         const val ADS_ENABLED = "ads_enabled"

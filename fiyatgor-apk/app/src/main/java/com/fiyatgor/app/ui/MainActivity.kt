@@ -430,6 +430,15 @@ class MainActivity : AppCompatActivity() {
         b.info.price.setTextColor(settings.priceColor)
         autoSize(b.info.productName, settings.nameFontSp)
         autoSize(b.info.price, settings.priceFontSp)
+        b.info.status.setTextSize(TypedValue.COMPLEX_UNIT_SP, settings.statusFontSp.toFloat())
+
+        b.clock.visibility = if (settings.clockVisible) View.VISIBLE else View.GONE
+        b.clock.setTextColor(settings.textColor)
+        b.clock.setTextSize(TypedValue.COMPLEX_UNIT_SP, settings.clockFontSp.toFloat())
+
+        val density = resources.displayMetrics.density
+        b.logo.layoutParams = b.logo.layoutParams.apply { height = (settings.logoHeightDp * density).toInt() }
+        b.logo.maxWidth = (resources.displayMetrics.widthPixels * 0.45f).toInt()
 
         val logoFile = settings.logoPath.takeIf { it.isNotBlank() }?.let { File(it) }
         val bmp = logoFile?.takeIf { it.exists() }?.let { BitmapFactory.decodeFile(it.absolutePath) }

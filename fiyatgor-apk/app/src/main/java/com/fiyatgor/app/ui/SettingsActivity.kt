@@ -80,7 +80,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
         setPreferencesFromResource(R.xml.preferences, rootKey)
         settings = AppSettings(requireContext())
 
-        numeric(K.DB_PORT, K.DB_LOGIN_TIMEOUT, K.DB_QUERY_TIMEOUT, K.PRICE_LIST, K.DEPOT, K.FONT_NAME, K.FONT_PRICE,
+        numeric(K.DB_PORT, K.DB_LOGIN_TIMEOUT, K.DB_QUERY_TIMEOUT, K.PRICE_LIST, K.DEPOT, K.FONT_NAME, K.FONT_PRICE, K.FONT_STATUS, K.FONT_CLOCK, K.LOGO_HEIGHT,
             K.RESULT_SECONDS, K.IDLE_TIMEOUT, K.AD_IMAGE_SECONDS, K.SCAN_CHAR_TIMEOUT, K.SCAN_MIN_LEN)
         password(K.DB_PASSWORD)
         password(K.PIN)

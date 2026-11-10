@@ -36,8 +36,12 @@
         <EditTextPreference app:key="color_bg" app:title="Arka plan rengi" app:dialogMessage="#RRGGBB biçiminde, örn. #FFFFFF" app:defaultValue="#FFFFFF" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
         <EditTextPreference app:key="color_text" app:title="Yazı rengi" app:defaultValue="#1A1A1A" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
         <EditTextPreference app:key="color_price" app:title="Fiyat rengi" app:defaultValue="#C62828" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
-        <EditTextPreference app:key="font_name_sp" app:title="Ürün adı en büyük yazı boyutu (sp)" app:defaultValue="44" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
-        <EditTextPreference app:key="font_price_sp" app:title="Fiyat en büyük yazı boyutu (sp)" app:defaultValue="120" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="font_name_sp" app:title="Ürün adı en büyük yazı boyutu (sp)" app:dialogMessage="Uzun isimler bu boyuttan başlayarak sığacak kadar küçültülür" app:defaultValue="72" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="font_price_sp" app:title="Fiyat en büyük yazı boyutu (sp)" app:defaultValue="200" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="font_status_sp" app:title="Bekleme yazısı boyutu (sp)" app:defaultValue="48" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="logo_height_dp" app:title="Logo yüksekliği (dp)" app:dialogMessage="Sol üst köşedeki logonun yüksekliği" app:defaultValue="120" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <SwitchPreferenceCompat app:key="clock_visible" app:title="Saati göster" app:summary="Sağ üst köşede canlı saat (SS:dd)" app:defaultValue="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="font_clock_sp" app:title="Saat yazı boyutu (sp)" app:defaultValue="56" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
         <ListPreference app:key="orientation" app:title="Ekran yönü" app:entries="@array/orientation_entries" app:entryValues="@array/orientation_values" app:defaultValue="auto" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
     </PreferenceCategory>
 
