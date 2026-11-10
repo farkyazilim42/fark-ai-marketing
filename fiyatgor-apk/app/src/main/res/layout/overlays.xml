@@ -17,20 +17,6 @@
         android:inputType="textMultiLine|textNoSuggestions|textVisiblePassword"
         android:imeOptions="actionDone|flagNoExtractUi" />
 
-    <View
-        android:id="@+id/connectionDot"
-        android:layout_width="12dp"
-        android:layout_height="12dp"
-        android:layout_gravity="bottom|start"
-        android:layout_margin="8dp"
-        android:background="@drawable/dot_red" />
-
-    <View
-        android:id="@+id/settingsCorner"
-        android:layout_width="96dp"
-        android:layout_height="96dp"
-        android:layout_gravity="top|end" />
-
     <FrameLayout
         android:id="@+id/adOverlay"
         android:layout_width="match_parent"

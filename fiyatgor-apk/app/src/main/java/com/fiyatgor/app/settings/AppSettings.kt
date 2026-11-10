@@ -39,6 +39,7 @@ class AppSettings(context: Context) {
         allowAnyDepot = bool(K.DEPOT_FALLBACK, true),
         vatMode = VatMode.from(str(K.VAT_MODE, "as_is")),
         fallbackToStockCode = bool(K.STOCK_CODE_FALLBACK, true),
+        subtitleColumn = str(K.SUBTITLE_FIELD, "sto_kisa_ismi").trim().takeIf { it.isNotEmpty() && it != "none" },
     )
 
     val currencySymbol get() = str(K.CURRENCY_SYMBOL, "TL")
@@ -49,15 +50,23 @@ class AppSettings(context: Context) {
 
     val welcomeText get() = str(K.WELCOME_TEXT, DEFAULT_WELCOME).ifBlank { DEFAULT_WELCOME }
     val logoPath get() = str(K.LOGO_PATH)
-    val backgroundColor get() = color(K.COLOR_BG, "#FFFFFF")
-    val textColor get() = color(K.COLOR_TEXT, "#1A1A1A")
-    val priceColor get() = color(K.COLOR_PRICE, "#C62828")
-    val nameFontSp get() = int(K.FONT_NAME, 72, 12, 300)
-    val priceFontSp get() = int(K.FONT_PRICE, 200, 20, 500)
-    val statusFontSp get() = int(K.FONT_STATUS, 48, 12, 200)
-    val clockFontSp get() = int(K.FONT_CLOCK, 56, 12, 200)
+    val backgroundColor get() = color(K.COLOR_BG, "#F4F6FB")
+    val accentColor get() = color(K.COLOR_ACCENT, "#6366F1")
+    val textColor get() = color(K.COLOR_TEXT, "#111827")
+    val priceColor get() = color(K.COLOR_PRICE, "#C8352E")
+    val nameFontSp get() = int(K.FONT_NAME, 64, 12, 300)
+    val priceFontSp get() = int(K.FONT_PRICE, 150, 20, 500)
+    val statusFontSp get() = int(K.FONT_STATUS, 44, 12, 200)
+    val clockFontSp get() = int(K.FONT_CLOCK, 26, 12, 200)
     val clockVisible get() = bool(K.CLOCK_VISIBLE, true)
-    val logoHeightDp get() = int(K.LOGO_HEIGHT, 120, 24, 600)
+    val logoHeightDp get() = int(K.LOGO_HEIGHT, 48, 24, 200)
+    val companyName get() = str(K.COMPANY_NAME, "FİYAT GÖR").trim()
+    val companyTagline get() = str(K.COMPANY_TAGLINE).trim()
+    val deviceId get() = str(K.DEVICE_ID).trim()
+    val hintText get() = str(K.HINT_TEXT, DEFAULT_HINT).trim()
+    val showCountdown get() = bool(K.SHOW_COUNTDOWN, true)
+    val ttsEnabled get() = bool(K.TTS_ENABLED, true)
+    val ttsAuto get() = bool(K.TTS_AUTO, false)
     val orientation get() = str(K.ORIENTATION, "auto")
 
     val resultDisplaySec get() = int(K.RESULT_SECONDS, 15, 0, 3600)
@@ -86,6 +95,7 @@ class AppSettings(context: Context) {
 
     companion object {
         const val DEFAULT_WELCOME = "Fiyat öğrenmek için ürün barkodunu okutunuz"
+        const val DEFAULT_HINT = "Barkodunuzu cihazın altındaki okuyucuya yaklaştırınız"
         val DEFAULT_ACTIONS = ScanExtras.DEFAULT_ACTIONS.joinToString(", ")
     }
 
@@ -119,6 +129,15 @@ class AppSettings(context: Context) {
         const val FONT_CLOCK = "font_clock_sp"
         const val CLOCK_VISIBLE = "clock_visible"
         const val LOGO_HEIGHT = "logo_height_dp"
+        const val COLOR_ACCENT = "color_accent"
+        const val COMPANY_NAME = "company_name"
+        const val COMPANY_TAGLINE = "company_tagline"
+        const val DEVICE_ID = "device_id"
+        const val HINT_TEXT = "hint_text"
+        const val SHOW_COUNTDOWN = "show_countdown"
+        const val TTS_ENABLED = "tts_enabled"
+        const val TTS_AUTO = "tts_auto"
+        const val SUBTITLE_FIELD = "subtitle_field"
         const val ORIENTATION = "orientation"
         const val RESULT_SECONDS = "result_display_s"
         const val ADS_ENABLED = "ads_enabled"

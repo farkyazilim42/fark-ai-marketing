@@ -45,4 +45,18 @@
         <item>tab</item>
         <item>timeout</item>
     </string-array>
+    <string-array name="subtitle_entries">
+        <item>Gösterme</item>
+        <item>Kısa isim (sto_kisa_ismi)</item>
+        <item>Yabancı isim (sto_yabanci_isim)</item>
+        <item>Marka kodu (sto_marka_kodu)</item>
+        <item>Ana grup kodu (sto_anagrup_kod)</item>
+    </string-array>
+    <string-array name="subtitle_values">
+        <item>none</item>
+        <item>sto_kisa_ismi</item>
+        <item>sto_yabanci_isim</item>
+        <item>sto_marka_kodu</item>
+        <item>sto_anagrup_kod</item>
+    </string-array>
 </resources>

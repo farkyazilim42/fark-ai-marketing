@@ -6,23 +6,33 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.ActivityInfo
+import android.content.res.ColorStateList
 import android.graphics.BitmapFactory
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.speech.tts.TextToSpeech
 import android.text.Editable
+import android.text.SpannableString
+import android.text.Spanned
 import android.text.TextWatcher
+import android.text.style.RelativeSizeSpan
 import android.util.TypedValue
-import android.view.Gravity
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
+import android.view.inputmethod.InputMethodManager
+import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.ColorUtils
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -37,7 +47,7 @@ import com.fiyatgor.app.ads.AdSources
 import com.fiyatgor.app.databinding.ActivityMainBinding
 import com.fiyatgor.app.db.ErrorMessages
 import com.fiyatgor.app.db.LookupResult
-import com.fiyatgor.app.db.PriceFormatter
+import com.fiyatgor.app.db.Product
 import com.fiyatgor.app.scan.BarcodeSanitizer
 import com.fiyatgor.app.scan.DuplicateFilter
 import com.fiyatgor.app.scan.ScanBuffer
@@ -47,6 +57,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.util.Date
 import java.util.concurrent.atomic.AtomicLong
 
 class MainActivity : AppCompatActivity() {
@@ -65,6 +76,18 @@ class MainActivity : AppCompatActivity() {
     private var lastCornerTap = 0L
     private var pinDialogOpen = false
 
+    private enum class Status { CONNECTING, READY, ERROR, NOT_CONFIGURED }
+    private var status = Status.CONNECTING
+
+    private var tts: TextToSpeech? = null
+    private var ttsReady = false
+    private var currentProduct: Product? = null
+
+    /** uptimeMillis deadlines driving the footer countdown; 0 = not scheduled. */
+    private var resetDeadline = 0L
+    private var idleDeadline = 0L
+    private var idleScreen = true
+
     private val idleRunnable = Runnable { startAds() }
     private val resetRunnable = Runnable { showWelcome() }
     private val keyFlushRunnable = Runnable { keyBuffer.flush()?.let { onScan(it, "Klavye") } }
@@ -73,6 +96,18 @@ class MainActivity : AppCompatActivity() {
         override fun run() {
             ping()
             handler.postDelayed(this, PING_INTERVAL_MS)
+        }
+    }
+    private val clockRunnable = object : Runnable {
+        override fun run() {
+            updateClock()
+            handler.postDelayed(this, 1000L - System.currentTimeMillis() % 1000L + 5)
+        }
+    }
+    private val countdownRunnable = object : Runnable {
+        override fun run() {
+            updateCountdown()
+            handler.postDelayed(this, 250L)
         }
     }
 
@@ -91,9 +126,11 @@ class MainActivity : AppCompatActivity() {
         })
 
         b.logo.setOnLongClickListener { askPinAndOpenSettings(); true }
-        b.overlays.settingsCorner.setOnClickListener { onCornerTap() }
+        b.clockBox.setOnClickListener { onClockTap() }
+        b.speakButton.setOnClickListener { speakCurrent(userInitiated = true) }
         b.overlays.adOverlay.setOnClickListener { stopAds(); resetIdle() }
         setupHiddenInput()
+        setStatus(Status.CONNECTING)
         showWelcome()
     }
 
@@ -105,6 +142,9 @@ class MainActivity : AppCompatActivity() {
         b.overlays.hiddenInput.requestFocus()
         resetIdle()
         handler.post(pingRunnable)
+        handler.post(clockRunnable)
+        handler.post(countdownRunnable)
+        if (settings.ttsEnabled || settings.ttsAuto) ensureTts()
         lifecycleScope.launch {
             adItems = withContext(Dispatchers.IO) { AdSources.load(this@MainActivity, settings) }
         }
@@ -114,7 +154,15 @@ class MainActivity : AppCompatActivity() {
         super.onPause()
         unregisterScanReceiver()
         handler.removeCallbacksAndMessages(null)
+        resetDeadline = 0L
         stopAds()
+        tts?.stop()
+    }
+
+    override fun onDestroy() {
+        tts?.shutdown()
+        tts = null
+        super.onDestroy()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -166,6 +214,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun appendKeyText(text: String) {
+        hideIme()
         keyBuffer.append(text, SystemClock.uptimeMillis())
         handler.removeCallbacks(keyFlushRunnable)
         if (settings.endMode.usesTimeout()) handler.postDelayed(keyFlushRunnable, settings.charTimeoutMs)
@@ -206,6 +255,12 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /** Some keyboards (e.g. Gboard with "show with hardware keyboard") pop up on scanner key input. */
+    private fun hideIme() {
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.hideSoftInputFromWindow(b.overlays.hiddenInput.windowToken, 0)
+    }
+
     private fun registerScanReceiver() {
         unregisterScanReceiver()
         if (!settings.broadcastEnabled) return
@@ -237,10 +292,12 @@ class MainActivity : AppCompatActivity() {
         if (code.length < settings.minBarcodeLength) return
         if (!duplicates.accept(code, SystemClock.uptimeMillis())) return
         LastScanInfo.record(code, source)
+        hideIme()
 
         stopAds()
         resetIdle()
         handler.removeCallbacks(resetRunnable)
+        resetDeadline = 0L
         val seq = scanSeq.incrementAndGet()
         showLoading(code)
 
@@ -260,103 +317,212 @@ class MainActivity : AppCompatActivity() {
         val cfg = settings.dbConfig()
         lifecycleScope.launch {
             val error = withContext(app.dbDispatcher) { app.repository.ping(cfg) }
-            setConnectionState(error == null)
+            setStatus(
+                when (error) {
+                    null -> Status.READY
+                    ErrorMessages.NOT_CONFIGURED -> Status.NOT_CONFIGURED
+                    else -> Status.ERROR
+                }
+            )
         }
     }
 
-    private fun setConnectionState(ok: Boolean) {
-        b.overlays.connectionDot.setBackgroundResource(if (ok) R.drawable.dot_green else R.drawable.dot_red)
+    // --- Header ---------------------------------------------------------------------------
+
+    private fun setStatus(s: Status) {
+        status = s
+        val (text, fg, bg) = when (s) {
+            Status.READY -> Triple("BARKOD OKUYUCU HAZIR", "#15803D", "#E8F8EE")
+            Status.ERROR -> Triple("BAĞLANTI HATASI", "#B91C1C", "#FDECEC")
+            Status.NOT_CONFIGURED -> Triple("AYARLAR EKSİK", "#B45309", "#FEF4E2")
+            Status.CONNECTING -> Triple("BAĞLANILIYOR…", "#B45309", "#FEF4E2")
+        }
+        val fgColor = Color.parseColor(fg)
+        b.statusText.text = text
+        b.statusText.setTextColor(fgColor)
+        b.statusPill.background = GradientDrawable().apply {
+            cornerRadius = dp(20f)
+            setColor(Color.parseColor(bg))
+            setStroke(dp(1f).toInt(), ColorUtils.setAlphaComponent(fgColor, 0x40))
+        }
+        b.statusDot.background = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(fgColor)
+        }
     }
 
+    private fun updateClock() {
+        val now = Date()
+        b.clockTime.text = DisplayTexts.time(now)
+        b.clockDate.text = DisplayTexts.date(now)
+    }
+
+    // --- Card states ------------------------------------------------------------------------
+
     private fun showWelcome() {
-        b.info.productName.text = ""
-        b.info.price.text = ""
-        b.info.vatNote.text = ""
-        b.info.details.text = ""
-        b.info.status.text = settings.welcomeText
-        b.info.status.setTextColor(settings.textColor)
-        setVisible(b.info.status, true)
-        setVisible(b.info.productName, false)
-        setVisible(b.info.price, false)
-        setVisible(b.info.vatNote, false)
-        setVisible(b.info.details, false)
+        idleScreen = true
+        currentProduct = null
+        resetDeadline = 0L
+        setVisible(b.productGroup, false)
+        setVisible(b.idleGroup, true)
+        b.idleTitle.text = settings.welcomeText
+        updateSpeakButton()
+    }
+
+    private fun showProductLayout(withDetails: Boolean) {
+        idleScreen = false
+        setVisible(b.idleGroup, false)
+        setVisible(b.productGroup, true)
+        setVisible(b.priceRow, withDetails)
+        setVisible(b.divider, withDetails)
+        setVisible(b.tiles, withDetails)
+        if (!withDetails) setVisible(b.vatNote, false)
     }
 
     private fun showLoading(code: String) {
-        b.info.productName.text = ""
-        b.info.price.text = ""
-        b.info.vatNote.text = ""
-        b.info.details.text = if (settings.showBarcode) "Barkod: $code" else ""
-        b.info.status.text = "Sorgulanıyor…"
-        b.info.status.setTextColor(settings.textColor)
-        setVisible(b.info.productName, false)
-        setVisible(b.info.price, false)
-        setVisible(b.info.vatNote, false)
-        setVisible(b.info.details, settings.showBarcode)
-        setVisible(b.info.status, true)
+        currentProduct = null
+        showProductLayout(withDetails = false)
+        b.productName.setTextColor(settings.textColor)
+        b.productName.text = "Sorgulanıyor…"
+        b.subtitle.text = code
+        setVisible(b.subtitle, true)
+        updateSpeakButton()
     }
 
     private fun render(result: LookupResult) {
         when (result) {
             is LookupResult.Found -> {
-                setConnectionState(true)
-                val p = result.product
-                b.info.productName.setTextColor(settings.textColor)
-                b.info.productName.gravity = Gravity.CENTER_HORIZONTAL or Gravity.BOTTOM
-                b.info.productName.text = p.name.ifBlank { p.stockCode }
-                val price = p.price
-                b.info.price.text = if (price != null) {
-                    PriceFormatter.format(price.amount, p.currency, settings.currencySymbol)
-                } else {
-                    "Fiyat tanımlı değil"
-                }
-                b.info.vatNote.text = when (price?.vatIncluded) {
-                    true -> "KDV Dahil"
-                    false -> "KDV Hariç"
-                    null -> ""
-                }
-                b.info.details.text = buildList {
-                    if (settings.showStockCode) add("Stok Kodu: ${p.stockCode}")
-                    if (settings.showBarcode) add("Barkod: ${p.barcode}")
-                    if (settings.showUnit && !p.unitName.isNullOrBlank()) add("Birim: ${p.unitName}")
-                }.joinToString("   •   ")
-                setVisible(b.info.productName, true)
-                setVisible(b.info.price, true)
-                setVisible(b.info.vatNote, settings.showVatNote && b.info.vatNote.text.isNotEmpty())
-                setVisible(b.info.details, b.info.details.text.isNotEmpty())
-                setVisible(b.info.status, false)
+                setStatus(Status.READY)
+                showProduct(result.product)
             }
             is LookupResult.NotFound -> {
-                setConnectionState(true)
+                setStatus(Status.READY)
                 showMessage("Ürün bulunamadı", "Barkod: ${result.barcode}")
             }
             is LookupResult.Error -> {
-                setConnectionState(false)
-                val title = if (result.message == ErrorMessages.NOT_CONFIGURED) "Ayarlar eksik" else "Bağlantı hatası"
-                showMessage(title, result.message)
+                val notConfigured = result.message == ErrorMessages.NOT_CONFIGURED
+                setStatus(if (notConfigured) Status.NOT_CONFIGURED else Status.ERROR)
+                showMessage(if (notConfigured) "Ayarlar eksik" else "Bağlantı hatası", result.message)
             }
         }
         scheduleReset()
     }
 
+    private fun showProduct(p: Product) {
+        currentProduct = p
+        showProductLayout(withDetails = true)
+        b.productName.setTextColor(settings.textColor)
+        b.productName.text = p.name.ifBlank { p.stockCode }
+        b.subtitle.text = p.subtitle.orEmpty()
+        setVisible(b.subtitle, !p.subtitle.isNullOrBlank())
+
+        val price = p.price
+        b.price.text = if (price != null) {
+            val parts = DisplayTexts.priceParts(price.amount, p.currency, settings.currencySymbol)
+            priceSpan(parts)
+        } else {
+            "Fiyat tanımlı değil"
+        }
+        val vat = when (price?.vatIncluded) {
+            true -> "KDV Dahil"
+            false -> "KDV Hariç"
+            null -> ""
+        }
+        b.vatNote.text = vat
+        setVisible(b.vatNote, settings.showVatNote && vat.isNotEmpty())
+
+        b.stockCodeValue.text = p.stockCode
+        b.barcodeValue.text = p.barcode
+        b.barcodeGraphic.setCode(p.barcode)
+        b.unitValue.text = p.unitName?.takeIf { it.isNotBlank() }
+            ?.let { "1 ${it.trim().uppercase(DisplayTexts.TURKISH)}" } ?: "—"
+        setVisible(b.tileStock, settings.showStockCode)
+        setVisible(b.tileBarcode, settings.showBarcode)
+        setVisible(b.tileUnit, settings.showUnit)
+        val anyTile = settings.showStockCode || settings.showBarcode || settings.showUnit
+        setVisible(b.tiles, anyTile)
+        setVisible(b.divider, anyTile)
+
+        updateSpeakButton()
+        if (settings.ttsAuto) speakCurrent(userInitiated = false)
+    }
+
+    /** Big number with a smaller currency label, e.g. "42,50 TL" or "₺42,50". */
+    private fun priceSpan(parts: DisplayTexts.PriceParts): CharSequence {
+        val text = if (parts.labelFirst) "${parts.label}${parts.number}" else "${parts.number} ${parts.label}"
+        val span = SpannableString(text)
+        val labelStart = if (parts.labelFirst) 0 else parts.number.length
+        val labelEnd = if (parts.labelFirst) parts.label.length else text.length
+        span.setSpan(RelativeSizeSpan(0.42f), labelStart, labelEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        return span
+    }
+
     private fun showMessage(title: String, detail: String) {
-        b.info.productName.text = title
-        b.info.productName.setTextColor(settings.priceColor)
-        b.info.productName.gravity = Gravity.CENTER
-        b.info.details.text = detail
-        b.info.price.text = ""
-        b.info.vatNote.text = ""
-        setVisible(b.info.productName, true)
-        setVisible(b.info.details, true)
-        setVisible(b.info.price, false)
-        setVisible(b.info.vatNote, false)
-        setVisible(b.info.status, false)
+        currentProduct = null
+        showProductLayout(withDetails = false)
+        b.productName.text = title
+        b.productName.setTextColor(settings.priceColor)
+        b.subtitle.text = detail
+        setVisible(b.subtitle, true)
+        updateSpeakButton()
     }
 
     private fun scheduleReset() {
         handler.removeCallbacks(resetRunnable)
+        resetDeadline = 0L
         val s = settings.resultDisplaySec
-        if (s > 0) handler.postDelayed(resetRunnable, s * 1000L)
+        if (s > 0) {
+            resetDeadline = SystemClock.uptimeMillis() + s * 1000L
+            handler.postDelayed(resetRunnable, s * 1000L)
+        }
+    }
+
+    // --- Footer ---------------------------------------------------------------------------
+
+    private fun updateCountdown() {
+        val now = SystemClock.uptimeMillis()
+        val (deadline, totalMs) = when {
+            !idleScreen && resetDeadline > 0 -> resetDeadline to settings.resultDisplaySec * 1000L
+            idleScreen && idleDeadline > 0 && adItems.isNotEmpty() && !adPlayer.isRunning ->
+                idleDeadline to settings.idleTimeoutSec * 1000L
+            else -> 0L to 0L
+        }
+        val show = settings.showCountdown && deadline > 0 && totalMs > 0
+        setVisible(b.countdownBox, show)
+        if (!show) return
+        val left = (deadline - now).coerceAtLeast(0)
+        b.countdownBar.progress = (left * b.countdownBar.max / totalMs).toInt()
+        b.countdownText.text = "${(left + 999) / 1000} sn"
+    }
+
+    private fun ensureTts() {
+        if (tts != null) return
+        tts = TextToSpeech(applicationContext) { code ->
+            val engine = tts ?: return@TextToSpeech
+            ttsReady = code == TextToSpeech.SUCCESS &&
+                engine.setLanguage(DisplayTexts.TURKISH) >= TextToSpeech.LANG_AVAILABLE
+        }
+    }
+
+    private fun speakCurrent(userInitiated: Boolean) {
+        val p = currentProduct ?: return
+        ensureTts()
+        val engine = tts
+        if (engine == null || !ttsReady) {
+            if (userInitiated) {
+                Toast.makeText(this, "Türkçe sesli okuma kullanılamıyor. Cihazda Türkçe ses paketi kurulu olmalı.", Toast.LENGTH_LONG).show()
+            }
+            return
+        }
+        val text = DisplayTexts.spoken(p.name.ifBlank { p.stockCode }, p.price?.amount, p.currency)
+        engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, "fiyat")
+        if (userInitiated) resetIdle()
+    }
+
+    private fun updateSpeakButton() {
+        val enabled = currentProduct != null
+        b.speakButton.isEnabled = enabled
+        b.speakButton.alpha = if (enabled) 1f else 0.45f
     }
 
     private fun setVisible(v: View, visible: Boolean) {
@@ -367,7 +533,12 @@ class MainActivity : AppCompatActivity() {
 
     private fun resetIdle() {
         handler.removeCallbacks(idleRunnable)
-        if (settings.adsEnabled) handler.postDelayed(idleRunnable, settings.idleTimeoutSec * 1000L)
+        idleDeadline = 0L
+        if (settings.adsEnabled) {
+            val ms = settings.idleTimeoutSec * 1000L
+            idleDeadline = SystemClock.uptimeMillis() + ms
+            handler.postDelayed(idleRunnable, ms)
+        }
     }
 
     private fun startAds() {
@@ -375,6 +546,7 @@ class MainActivity : AppCompatActivity() {
         adPlayer.imageDurationMs = settings.adImageSec * 1000L
         adPlayer.muted = settings.adMuted
         showWelcome()
+        tts?.stop()
         adPlayer.start(adItems)
     }
 
@@ -385,7 +557,7 @@ class MainActivity : AppCompatActivity() {
 
     // --- Settings access ------------------------------------------------------------------
 
-    private fun onCornerTap() {
+    private fun onClockTap() {
         val now = SystemClock.uptimeMillis()
         cornerTaps = if (now - lastCornerTap < 1500) cornerTaps + 1 else 1
         lastCornerTap = now
@@ -423,30 +595,59 @@ class MainActivity : AppCompatActivity() {
             "portrait_fixed" -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
             else -> ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
+        val accent = settings.accentColor
         b.root.setBackgroundColor(settings.backgroundColor)
-        b.info.productName.setTextColor(settings.textColor)
-        b.info.details.setTextColor(settings.textColor)
-        b.info.vatNote.setTextColor(settings.textColor)
-        b.info.price.setTextColor(settings.priceColor)
-        autoSize(b.info.productName, settings.nameFontSp)
-        autoSize(b.info.price, settings.priceFontSp)
-        b.info.status.setTextSize(TypedValue.COMPLEX_UNIT_SP, settings.statusFontSp.toFloat())
+        b.frame.background = GradientDrawable().apply {
+            setColor(settings.backgroundColor)
+            setStroke(dp(3f).toInt(), accent)
+            cornerRadius = dp(14f)
+        }
+        b.frame.clipToOutline = true
 
-        b.clock.visibility = if (settings.clockVisible) View.VISIBLE else View.GONE
-        b.clock.setTextColor(settings.textColor)
-        b.clock.setTextSize(TypedValue.COMPLEX_UNIT_SP, settings.clockFontSp.toFloat())
+        b.companyTagline.setTextColor(accent)
+        b.countdownBar.progressTintList = ColorStateList.valueOf(accent)
+        b.speakIcon.imageTintList = ColorStateList.valueOf(accent)
+        b.idleBarcode.barColor = ColorUtils.setAlphaComponent(settings.textColor, 0x55)
+        b.barcodeGraphic.barColor = settings.textColor
+        b.idleBarcode.setCode("8690002000027")
 
-        val density = resources.displayMetrics.density
-        b.logo.layoutParams = b.logo.layoutParams.apply { height = (settings.logoHeightDp * density).toInt() }
-        b.logo.maxWidth = (resources.displayMetrics.widthPixels * 0.45f).toInt()
+        b.productName.setTextColor(settings.textColor)
+        b.idleTitle.setTextColor(settings.textColor)
+        b.price.setTextColor(settings.priceColor)
+        autoSize(b.productName, settings.nameFontSp)
+        autoSize(b.price, settings.priceFontSp)
+        b.idleTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, settings.statusFontSp.toFloat())
 
+        setText(b.companyName, settings.companyName)
+        setText(b.companyTagline, settings.companyTagline)
+        setText(b.hintText, settings.hintText)
+        setVisible(b.hintPill, settings.hintText.isNotEmpty())
+        val id = settings.deviceId
+        setText(b.deviceId, if (id.isEmpty()) "" else "ID: $id")
+        setVisible(b.clockTime, settings.clockVisible)
+        setVisible(b.clockDate, settings.clockVisible)
+        setVisible(b.idDivider, settings.clockVisible && id.isNotEmpty())
+        b.clockTime.setTextSize(TypedValue.COMPLEX_UNIT_SP, settings.clockFontSp.toFloat())
+        b.clockDate.setTextSize(TypedValue.COMPLEX_UNIT_SP, (settings.clockFontSp * 0.5f).coerceAtLeast(10f))
+        setVisible(b.speakButton, settings.ttsEnabled)
+
+        b.logo.layoutParams = b.logo.layoutParams.apply { height = dp(settings.logoHeightDp.toFloat()).toInt() }
+        b.logo.maxWidth = (resources.displayMetrics.widthPixels * 0.25f).toInt()
+        b.logo.scaleType = ImageView.ScaleType.FIT_CENTER
         val logoFile = settings.logoPath.takeIf { it.isNotBlank() }?.let { File(it) }
         val bmp = logoFile?.takeIf { it.exists() }?.let { BitmapFactory.decodeFile(it.absolutePath) }
         if (bmp != null) b.logo.setImageBitmap(bmp) else b.logo.setImageResource(R.drawable.default_logo)
-        if (b.info.status.visibility == View.VISIBLE && b.info.productName.visibility != View.VISIBLE) {
-            b.info.status.text = settings.welcomeText
-        }
+
+        if (idleScreen) b.idleTitle.text = settings.welcomeText
+        updateClock()
     }
+
+    private fun setText(tv: TextView, text: String) {
+        tv.text = text
+        setVisible(tv, text.isNotEmpty())
+    }
+
+    private fun dp(v: Float) = v * resources.displayMetrics.density
 
     private fun autoSize(tv: TextView, maxSp: Int) {
         TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(

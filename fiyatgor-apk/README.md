@@ -32,6 +32,6 @@ FIYATGOR_IT_HOST=127.0.0.1 ./gradlew testDebugUnitTest
 - `db/`: jTDS bağlantısı (`MikroRepository`), sorgular (`MikroQueries`), depo/birim fiyat seçimi (`PriceSelector`), KDV ve TL biçimlendirme (`PriceFormat`), Türkçe hata mesajları.
 - `scan/`: klavye (keyboard wedge) tamponu, broadcast intent extra çözümleme, tekrar okuma filtresi.
 - `ads/`: boşta reklam döngüsü (resim + video).
-- `ui/`: kiosk ana ekranı, PIN korumalı ayarlar (`res/xml/preferences.xml`).
+- `ui/`: kiosk ana ekranı (başlık, ürün kartı, alt bilgi çubuğu, Türkçe sesli okuma), PIN korumalı ayarlar (`res/xml/preferences.xml`).
 
 Sorgu akışı: `BARKOD_TANIMLARI.bar_kodu` → `bar_stokkodu`, bulunamazsa `STOKLAR.sto_kod`. Fiyat, seçili liste no için `STOK_SATIS_FIYAT_LISTELERI` tablosundan okunur. Depo önceliği "seçili depo → 0 → herhangi bir depo" sırasıyla, birim önceliği "barkodun birimi → 1. birim" sırasıyla uygulanır. KDV dahil bilgisi `STOK_SATIS_FIYAT_LISTE_TANIMLARI.sfl_kdvdahil` alanından gelir.

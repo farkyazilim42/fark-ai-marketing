@@ -30,19 +30,31 @@
     </PreferenceCategory>
 
     <PreferenceCategory app:title="Görünüm" app:iconSpaceReserved="false">
-        <Preference app:key="logo_pick" app:title="Firma logosu seç" app:summary="Cihaz hafızasından resim seçin" app:iconSpaceReserved="false" />
+        <Preference app:key="logo_pick" app:title="Firma logosu seç" app:summary="Sol üst köşede gösterilir" app:iconSpaceReserved="false" />
         <Preference app:key="logo_clear" app:title="Varsayılan logoya dön" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="logo_height_dp" app:title="Logo yüksekliği (dp)" app:defaultValue="48" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="company_name" app:title="Firma adı" app:dialogMessage="Logonun yanında gösterilir. Boş bırakılırsa gizlenir." app:defaultValue="FİYAT GÖR" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="company_tagline" app:title="Slogan (isteğe bağlı)" app:dialogMessage="Firma adının altında küçük yazı. Boş bırakılırsa gizlenir." app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="device_id" app:title="Cihaz kimliği" app:dialogMessage="Sağ üstte 'ID: ...' olarak gösterilir, örn. KSK-04. Boş bırakılırsa gizlenir." app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <SwitchPreferenceCompat app:key="clock_visible" app:title="Saat ve tarihi göster" app:summary="Sağ üst köşede SS:dd:ss ve Türkçe tarih" app:defaultValue="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="font_clock_sp" app:title="Saat yazı boyutu (sp)" app:defaultValue="26" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <ListPreference app:key="subtitle_field" app:title="Ürün adı altındaki satır" app:entries="@array/subtitle_entries" app:entryValues="@array/subtitle_values" app:defaultValue="sto_kisa_ismi" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
         <EditTextPreference app:key="welcome_text" app:title="Bekleme ekranı yazısı" app:defaultValue="Fiyat öğrenmek için ürün barkodunu okutunuz" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
-        <EditTextPreference app:key="color_bg" app:title="Arka plan rengi" app:dialogMessage="#RRGGBB biçiminde, örn. #FFFFFF" app:defaultValue="#FFFFFF" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
-        <EditTextPreference app:key="color_text" app:title="Yazı rengi" app:defaultValue="#1A1A1A" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
-        <EditTextPreference app:key="color_price" app:title="Fiyat rengi" app:defaultValue="#C62828" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
-        <EditTextPreference app:key="font_name_sp" app:title="Ürün adı en büyük yazı boyutu (sp)" app:dialogMessage="Uzun isimler bu boyuttan başlayarak sığacak kadar küçültülür" app:defaultValue="72" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
-        <EditTextPreference app:key="font_price_sp" app:title="Fiyat en büyük yazı boyutu (sp)" app:defaultValue="200" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
-        <EditTextPreference app:key="font_status_sp" app:title="Bekleme yazısı boyutu (sp)" app:defaultValue="48" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
-        <EditTextPreference app:key="logo_height_dp" app:title="Logo yüksekliği (dp)" app:dialogMessage="Sol üst köşedeki logonun yüksekliği" app:defaultValue="120" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
-        <SwitchPreferenceCompat app:key="clock_visible" app:title="Saati göster" app:summary="Sağ üst köşede canlı saat (SS:dd)" app:defaultValue="true" app:iconSpaceReserved="false" />
-        <EditTextPreference app:key="font_clock_sp" app:title="Saat yazı boyutu (sp)" app:defaultValue="56" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="hint_text" app:title="Alt bilgi yazısı" app:dialogMessage="Sol alttaki ipucu. Boş bırakılırsa gizlenir." app:defaultValue="Barkodunuzu cihazın altındaki okuyucuya yaklaştırınız" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <SwitchPreferenceCompat app:key="show_countdown" app:title="Geri sayım çubuğunu göster" app:summary="Bekleme / reklam ekranına dönüşe kalan süre" app:defaultValue="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="color_bg" app:title="Arka plan rengi" app:dialogMessage="#RRGGBB biçiminde" app:defaultValue="#F4F6FB" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="color_accent" app:title="Vurgu rengi (çerçeve, çubuk)" app:defaultValue="#6366F1" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="color_text" app:title="Yazı rengi" app:defaultValue="#111827" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="color_price" app:title="Fiyat rengi" app:defaultValue="#C8352E" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="font_name_sp" app:title="Ürün adı en büyük yazı boyutu (sp)" app:dialogMessage="Uzun isimler bu boyuttan başlayarak sığacak kadar küçültülür" app:defaultValue="64" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="font_price_sp" app:title="Fiyat en büyük yazı boyutu (sp)" app:defaultValue="150" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+        <EditTextPreference app:key="font_status_sp" app:title="Bekleme yazısı boyutu (sp)" app:defaultValue="44" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
         <ListPreference app:key="orientation" app:title="Ekran yönü" app:entries="@array/orientation_entries" app:entryValues="@array/orientation_values" app:defaultValue="auto" app:useSimpleSummaryProvider="true" app:iconSpaceReserved="false" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="Sesli Okuma" app:iconSpaceReserved="false">
+        <SwitchPreferenceCompat app:key="tts_enabled" app:title="&quot;Sesli Oku&quot; düğmesini göster" app:summary="Ürün adı ve fiyatını Türkçe okur (Android metin okuma)" app:defaultValue="true" app:iconSpaceReserved="false" />
+        <SwitchPreferenceCompat app:key="tts_auto" app:title="Her okutmada otomatik sesli oku" app:defaultValue="false" app:iconSpaceReserved="false" />
     </PreferenceCategory>
 
     <PreferenceCategory app:title="Reklam" app:iconSpaceReserved="false">

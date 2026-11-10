@@ -9,6 +9,7 @@ CREATE TABLE dbo.STOKLAR (
     sto_iptal bit NOT NULL DEFAULT 0,
     sto_kod nvarchar(25) NOT NULL UNIQUE,
     sto_isim nvarchar(127) NOT NULL,
+    sto_kisa_ismi nvarchar(127) NULL,
     sto_birim1_ad nvarchar(10) NULL,
     sto_birim2_ad nvarchar(10) NULL,
     sto_birim3_ad nvarchar(10) NULL,
@@ -51,11 +52,11 @@ INSERT INTO dbo.STOK_SATIS_FIYAT_LISTE_TANIMLARI (sfl_sirano, sfl_aciklama, sfl_
  (1, N'Perakende Satış', 1),
  (2, N'Toptan (KDV hariç)', 0);
 
-INSERT INTO dbo.STOKLAR (sto_kod, sto_isim, sto_birim1_ad, sto_birim2_ad, sto_perakende_vergi) VALUES
- (N'ST001', N'Çaykur Rize Turist Çayı 1000 g', N'ADET', N'KOLI', 2),
- (N'ST002', N'Sütaş Tam Yağlı Süt 1 L', N'ADET', N'KOLI', 2),
- (N'ST003', N'Şölen Ozmo Fındıklı Gofret 30 g', N'ADET', N'KOLI', 2),
- (N'ST004', N'Arçelik Çay Makinesi Çaysever', N'ADET', NULL, 4);
+INSERT INTO dbo.STOKLAR (sto_kod, sto_isim, sto_kisa_ismi, sto_birim1_ad, sto_birim2_ad, sto_perakende_vergi) VALUES
+ (N'ST001', N'Çaykur Rize Turist Çayı 1000 g', NULL, N'ADET', N'KOLI', 2),
+ (N'ST002', N'Sütaş Tam Yağlı Süt 1 L', N'Homojenize • %3.5 Yağ • Tetrapak Ambalaj', N'ADET', N'KOLI', 2),
+ (N'ST003', N'Şölen Ozmo Fındıklı Gofret 30 g', N'Şölen Ozmo Fındıklı Gofret 30 g', N'ADET', N'KOLI', 2),
+ (N'ST004', N'Arçelik Çay Makinesi Çaysever', NULL, N'ADET', NULL, 4);
 
 INSERT INTO dbo.BARKOD_TANIMLARI (bar_kodu, bar_stokkodu, bar_birimpntr) VALUES
  (N'8690001000011', N'ST001', 1),

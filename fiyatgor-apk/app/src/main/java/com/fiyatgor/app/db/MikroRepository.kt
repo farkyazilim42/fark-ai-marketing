@@ -13,12 +13,15 @@ data class LookupOptions(
     val allowAnyDepot: Boolean = true,
     val vatMode: VatMode = VatMode.AS_IS,
     val fallbackToStockCode: Boolean = true,
+    /** STOKLAR column shown under the name (e.g. sto_kisa_ismi); read only if present in the row. */
+    val subtitleColumn: String? = null,
 )
 
 data class Product(
     val barcode: String,
     val stockCode: String,
     val name: String,
+    val subtitle: String?,
     val unitName: String?,
     val price: DisplayPrice?,
     val currency: Int,
@@ -111,9 +114,9 @@ class MikroRepository {
         }
 
     private fun doLookup(c: Connection, barcode: String, cfg: DbConfig, opts: LookupOptions): LookupResult {
-        var row = queryProduct(prepare(c, MikroQueries.PRODUCT_BY_BARCODE, cfg), barcode)
+        var row = queryProduct(prepare(c, MikroQueries.PRODUCT_BY_BARCODE, cfg), barcode, opts.subtitleColumn)
         if (row == null && opts.fallbackToStockCode) {
-            row = queryProduct(prepare(c, MikroQueries.PRODUCT_BY_STOCK_CODE, cfg), barcode)
+            row = queryProduct(prepare(c, MikroQueries.PRODUCT_BY_STOCK_CODE, cfg), barcode, opts.subtitleColumn)
         }
         if (row == null) return LookupResult.NotFound(barcode)
 
@@ -149,6 +152,7 @@ class MikroRepository {
                 barcode = barcode,
                 stockCode = row.stockCode,
                 name = row.name,
+                subtitle = row.subtitle?.takeIf { !it.equals(row.name, ignoreCase = true) },
                 unitName = row.unitNames[unitPointer] ?: row.unitNames[1],
                 price = display,
                 currency = chosen?.currency ?: 0,
@@ -160,12 +164,13 @@ class MikroRepository {
     private class ProductRow(
         val stockCode: String,
         val name: String,
+        val subtitle: String?,
         val barcodeUnit: Int?,
         val vatPointer: Int?,
         val unitNames: Map<Int, String>,
     )
 
-    private fun queryProduct(ps: PreparedStatement, code: String): ProductRow? {
+    private fun queryProduct(ps: PreparedStatement, code: String, subtitleColumn: String?): ProductRow? {
         ps.setString(1, code)
         return ps.executeQuery().use { rs ->
             if (!rs.next()) return null
@@ -173,6 +178,8 @@ class MikroRepository {
             ProductRow(
                 stockCode = rs.getString(MikroQueries.COL_CODE).orEmpty().trim(),
                 name = rs.getString(MikroQueries.COL_NAME).orEmpty().trim(),
+                subtitle = subtitleColumn?.lowercase()?.takeIf { it.isNotBlank() && it in cols }
+                    ?.let { rs.getString(it)?.trim()?.takeIf { v -> v.isNotEmpty() } },
                 barcodeUnit = optInt(rs, cols, MikroQueries.BARCODE_UNIT_ALIAS),
                 vatPointer = optInt(rs, cols, MikroQueries.COL_VAT_POINTER),
                 unitNames = (1..4).mapNotNull { p ->

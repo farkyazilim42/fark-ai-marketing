@@ -64,6 +64,15 @@ class MikroRepositoryIntegrationTest {
         assertEquals(true, p.price!!.vatIncluded)
     }
 
+    @Test fun subtitleFromOptionalColumn() {
+        val repo = MikroRepository()
+        val p = found(repo.lookup("8690002000028", cfg, LookupOptions(subtitleColumn = "sto_kisa_ismi")))
+        assertEquals("Homojenize • %3.5 Yağ • Tetrapak Ambalaj", p.subtitle)
+        assertEquals(null, found(repo.lookup("8690003000035", cfg, LookupOptions(subtitleColumn = "sto_kisa_ismi"))).subtitle)
+        assertEquals(null, found(repo.lookup("8690002000028", cfg, LookupOptions(subtitleColumn = "sto_yok_kolon"))).subtitle)
+        assertEquals(null, found(repo.lookup("8690002000028", cfg, LookupOptions())).subtitle)
+    }
+
     @Test fun notFound() {
         assertTrue(MikroRepository().lookup("0000000000000", cfg, LookupOptions()) is LookupResult.NotFound)
     }
